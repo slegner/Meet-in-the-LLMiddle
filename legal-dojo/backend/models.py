@@ -27,6 +27,10 @@ class ChatResponse(BaseModel):
     phase: str
 
 
+class TtsRequest(BaseModel):
+    text: str
+
+
 class ProfileModel(BaseModel):
     display_name: str = "Trainee"
     notes: str = ""

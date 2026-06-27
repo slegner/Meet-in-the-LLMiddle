@@ -8,6 +8,7 @@ import evaluators
 import player_memory
 import report_pdf
 import store
+import tts as tts_module
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response
@@ -17,6 +18,7 @@ from models import (
     ProfileModel,
     StartRequest,
     StartResponse,
+    TtsRequest,
 )
 
 app = FastAPI(title="Legal Dojo API", version="0.2.0")
@@ -187,6 +189,18 @@ def get_transcript(sid: str):
 # ---------------------------------------------------------------------------
 # Player memory (Training Profile)
 # ---------------------------------------------------------------------------
+
+@app.post("/tts")
+def tts(req: TtsRequest):
+    text = (req.text or "").strip()
+    if not text:
+        raise HTTPException(400, "No text to speak.")
+    try:
+        audio = tts_module.synthesize(text)
+    except Exception as e:
+        raise HTTPException(502, f"TTS failed: {e}")
+    return Response(content=audio, media_type="audio/wav")
+
 
 @app.get("/player-memory")
 def get_player_memory():

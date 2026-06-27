@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { postChat, endSession, type Report } from "@/lib/api";
+import { postChat, endSession, fetchTtsUrl, type Report } from "@/lib/api";
 import CaseFileOverlay from "../components/CaseFileOverlay";
 import HistoryOverlay from "../components/HistoryOverlay";
 import ReportView from "../components/ReportView";
@@ -25,6 +25,24 @@ function Scene() {
   const [report, setReport] = useState<Report | null>(null);
   const [ending, setEnding] = useState(false);
   const [ended, setEnded] = useState(false);
+
+  const [voiceOn, setVoiceOn] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastUrlRef = useRef<string | null>(null);
+
+  async function speak(text: string) {
+    if (!voiceOn) return;
+    try {
+      const url = await fetchTtsUrl(text);
+      if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
+      lastUrlRef.current = url;
+      if (!audioRef.current) audioRef.current = new Audio();
+      audioRef.current.src = url;
+      audioRef.current.play().catch(() => {}); // ignore autoplay blocks
+    } catch {
+      /* TTS is best-effort; text still works */
+    }
+  }
 
   const histRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -59,6 +77,7 @@ function Scene() {
       setMessages((m) => [...m, { role: "ai", text: res.adversary }]);
       setTurns(res.turn_number);
       setPhase(res.phase);
+      speak(res.adversary);
     } catch {
       // Roll back the optimistic bubble and give the text back so the turn
       // isn't lost — the user can just press Send again.
@@ -102,6 +121,18 @@ function Scene() {
           <button className="btn btn-secondary btn-block" onClick={() => setShowCaseFile(true)}>📁 Case File</button>
           <button className="btn btn-danger btn-block" onClick={end} disabled={ending || ended}>
             {ending ? "Scoring…" : ended ? "Ended" : "⏹ End"}
+          </button>
+          <button
+            className="btn btn-secondary btn-block"
+            onClick={() => {
+              setVoiceOn((v) => {
+                if (v && audioRef.current) audioRef.current.pause();
+                return !v;
+              });
+            }}
+            title="Toggle the opponent's voice"
+          >
+            {voiceOn ? "🔊 Voice on" : "🔇 Voice off"}
           </button>
           <div className="turn-counter">Turn {turns}{phase && <span className="phase-pill">{phase}</span>}</div>
         </div>

@@ -115,5 +115,15 @@ export const listSessions = () => getJSON<SessionCard[]>("/sessions");
 export const deleteSession = (sid: string) => send<{ deleted: boolean }>("DELETE", `/sessions/${sid}`);
 export const getProfile = () => getJSON<Profile>("/player-memory");
 export const saveProfile = (p: Profile) => send<Profile>("PUT", "/player-memory", p);
+export async function fetchTtsUrl(text: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) throw new Error(`TTS failed: ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+
 export const reportPdfUrl = (sid: string) => `${API_BASE}/sessions/${sid}/report.pdf`;
 export const transcriptUrl = (sid: string) => `${API_BASE}/sessions/${sid}/transcript`;
