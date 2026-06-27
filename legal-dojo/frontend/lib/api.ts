@@ -111,6 +111,21 @@ export const postChat = (sid: string, message: string) =>
 export const endSession = (sid: string) =>
   send<Report>("POST", `/sessions/${sid}/end`);
 export const getReport = (sid: string) => getJSON<Report>(`/sessions/${sid}/report`);
+export interface TurnRecord {
+  n: number;
+  student: string;
+  adversary: string;
+  phase: string;
+}
+export interface SessionState {
+  id: string;
+  side: Side;
+  case_title: string;
+  status: string;
+  turns: TurnRecord[];
+}
+export const getSession = (sid: string) => getJSON<SessionState>(`/sessions/${sid}`);
+
 export const listSessions = () => getJSON<SessionCard[]>("/sessions");
 export const deleteSession = (sid: string) => send<{ deleted: boolean }>("DELETE", `/sessions/${sid}`);
 export const getProfile = () => getJSON<Profile>("/player-memory");

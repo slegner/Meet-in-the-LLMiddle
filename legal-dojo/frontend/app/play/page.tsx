@@ -2,7 +2,9 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { postChat, endSession, ttsUrl, type Report } from "@/lib/api";
+import { postChat, endSession, getSession, ttsUrl, type Report } from "@/lib/api";
+
+const ACTIVE_KEY = "legaldojo_activeSid";
 import CaseFileOverlay from "../components/CaseFileOverlay";
 import HistoryOverlay from "../components/HistoryOverlay";
 import ReportView from "../components/ReportView";
@@ -44,6 +46,30 @@ function Scene() {
   useEffect(() => {
     if (expanded) histRef.current?.scrollTo({ top: histRef.current.scrollHeight });
   }, [messages, expanded]);
+
+  // Resume: rebuild the conversation from the saved session and remember this
+  // as the active game so we can return to the current stage later.
+  useEffect(() => {
+    if (!sid) return;
+    getSession(sid)
+      .then((s) => {
+        const msgs: Msg[] = [];
+        for (const t of s.turns) {
+          msgs.push({ role: "player", text: t.student });
+          msgs.push({ role: "ai", text: t.adversary });
+        }
+        setMessages(msgs);
+        setTurns(s.turns.length);
+        if (s.turns.length) setPhase(s.turns[s.turns.length - 1].phase);
+        if (s.status === "ended") {
+          setEnded(true);
+          localStorage.removeItem(ACTIVE_KEY);
+        } else {
+          localStorage.setItem(ACTIVE_KEY, sid);
+        }
+      })
+      .catch(() => {});
+  }, [sid]);
 
   // While the 4-agent team runs (~6-7s), cycle a themed status so the wait
   // reads as "the opponent is strategising" rather than "stuck".
@@ -90,6 +116,7 @@ function Scene() {
     try {
       setReport(await endSession(sid));
       setEnded(true);
+      localStorage.removeItem(ACTIVE_KEY);
     } catch {
       setError("Could not generate the report.");
     } finally {

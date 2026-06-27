@@ -152,10 +152,8 @@ def save_session(session: dict[str, Any]) -> None:
 
 
 def list_sessions() -> list[dict[str, Any]]:
-    """History cards: id, case, side, date, status, one-line summary.
-
-    Empty drafts (0 turns and not ended) are hidden — they're just noise from
-    starting a simulation without playing it.
+    """History cards: only ENDED simulations. In-progress games are not history
+    — they're resumed via their session id, not listed here.
     """
     out = []
     for path in SESSIONS_DIR.glob("*.json"):
@@ -164,7 +162,7 @@ def list_sessions() -> list[dict[str, Any]]:
                 s = json.load(f)
         except (json.JSONDecodeError, OSError):
             continue
-        if len(s.get("turns", [])) == 0 and s.get("status") != "ended":
+        if s.get("status") != "ended":
             continue
         out.append(
             {

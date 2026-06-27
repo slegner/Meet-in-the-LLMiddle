@@ -6,10 +6,13 @@ import {
   listCases,
   getCase,
   startSession,
+  getSession,
   type CaseSummary,
   type CaseDetail,
   type Side,
 } from "@/lib/api";
+
+const ACTIVE_KEY = "legaldojo_activeSid";
 
 export default function StartPage() {
   const router = useRouter();
@@ -18,6 +21,7 @@ export default function StartPage() {
   const [side, setSide] = useState<Side | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resume, setResume] = useState<{ sid: string; turns: number; side: Side } | null>(null);
 
   useEffect(() => {
     listCases()
@@ -26,6 +30,18 @@ export default function StartPage() {
         if (cs[0]) return getCase(cs[0].id).then(setDetail);
       })
       .catch(() => setError("Could not reach the backend on :8000. Is it running?"));
+  }, []);
+
+  // Offer to resume an unfinished game if one is remembered.
+  useEffect(() => {
+    const sid = localStorage.getItem(ACTIVE_KEY);
+    if (!sid) return;
+    getSession(sid)
+      .then((s) => {
+        if (s.status === "ended") localStorage.removeItem(ACTIVE_KEY);
+        else setResume({ sid, turns: s.turns.length, side: s.side });
+      })
+      .catch(() => localStorage.removeItem(ACTIVE_KEY));
   }, []);
 
   async function begin() {
@@ -47,6 +63,22 @@ export default function StartPage() {
 
   return (
     <div className="container narrow">
+      {resume && (
+        <section className="card" style={{ borderColor: "var(--accent)" }}>
+          <div className="row-between">
+            <div>
+              <b>You have a negotiation in progress</b>
+              <div className="muted" style={{ fontSize: 13 }}>
+                as {resume.side} · {resume.turns} turns played
+              </div>
+            </div>
+            <button className="btn" onClick={() => router.push(`/play?sid=${resume.sid}`)}>
+              Resume →
+            </button>
+          </div>
+        </section>
+      )}
+
       <h1>New Simulation</h1>
       <p className="subtitle">Pick a case, choose your side, and negotiate against the AI.</p>
 
