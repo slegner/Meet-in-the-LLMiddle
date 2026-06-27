@@ -135,7 +135,7 @@ export default function ProfilePage() {
                     type="number"
                     min={10} max={600} step={5}
                     value={profile.timer_idle_secs ?? 120}
-                    onChange={(e) => update("timer_idle_secs", Math.max(10, parseInt(e.target.value) || 120))}
+                    onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) update("timer_idle_secs", v); }}
                     style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
                   />
                   <span className="muted">sec</span>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
                     type="number"
                     min={1} max={30} step={0.5}
                     value={((profile.timer_response_secs ?? 300) / 60).toFixed(1).replace(/\.0$/, "")}
-                    onChange={(e) => update("timer_response_secs", Math.round(Math.max(1, parseFloat(e.target.value) || 5) * 60))}
+                    onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) update("timer_response_secs", Math.round(v * 60)); }}
                     style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
                   />
                   <span className="muted">min</span>
