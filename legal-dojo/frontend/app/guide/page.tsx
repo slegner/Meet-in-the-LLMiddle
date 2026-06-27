@@ -28,7 +28,7 @@ export default function GuidePage() {
   }, []);
 
   return (
-    <div className="container narrow" style={{ maxWidth: 760 }}>
+    <div className="container">
       <h1>What Makes a Good Negotiator?</h1>
       <p className="subtitle">
         The six principles used to grade your performance after each simulation.
@@ -36,21 +36,10 @@ export default function GuidePage() {
 
       {principles.map((p, i) => (
         <div key={i} className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <span style={{
-              background: "var(--accent)",
-              color: "#1a1200",
-              borderRadius: 5,
-              padding: "2px 9px",
-              fontWeight: 700,
-              fontSize: 12,
-              flexShrink: 0,
-            }}>
-              {i + 1}
-            </span>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{p.heading}</h2>
-          </div>
-          <p style={{ margin: 0, lineHeight: 1.7, color: "var(--muted)", fontSize: 14 }}>{p.body}</p>
+          <p style={{ margin: "0 0 6px", fontWeight: 700, fontSize: 15 }}>
+            {i + 1}. {p.heading}
+          </p>
+          <p style={{ margin: 0, lineHeight: 1.7, fontSize: 14 }}>{p.body}</p>
         </div>
       ))}
     </div>

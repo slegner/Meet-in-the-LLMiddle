@@ -170,10 +170,14 @@ def evaluate_legal(case, session, legal_brief):
 
 
 def evaluate_negotiation(case, session, negotiation_brief):
+    criteria_list = "\n".join(f"  {i+1}. {c['short']}" for i, c in enumerate(_CRITERIA))
     return _evaluate(
         "You are a NEGOTIATION EXPERT (Harvard-method). Judge the trainee's "
-        "anchoring, concession discipline, use of leverage and BATNA, information "
-        "control, and composure against pressure tactics.",
+        "negotiation performance specifically through the lens of these 6 principles:\n"
+        f"{criteria_list}\n"
+        "Name 2-3 of these principles by their short name in your comments and say "
+        "concretely how the student performed on them. Weak spots should each name "
+        "the relevant principle.",
         _player_brief(case, session["side"]),
         negotiation_brief,
     )

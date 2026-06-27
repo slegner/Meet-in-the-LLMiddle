@@ -33,8 +33,12 @@ from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai import types  # noqa: E402
 
 import concession  # noqa: E402
+import evaluators  # noqa: E402
 import personalities  # noqa: E402
 import store  # noqa: E402
+
+# Short names of the 6 graded criteria — injected into Director and NoteTaker
+_CRITERIA_NAMES = ", ".join(c["short"] for c in evaluators._CRITERIA)
 
 FLASH = os.environ.get("LLM_FLASH_MODEL", "gemini-2.5-flash")
 LITE = os.environ.get("LLM_LITE_MODEL", "gemini-2.5-flash-lite")
@@ -89,6 +93,10 @@ director = LlmAgent(
         "Your private notes so far:\n{ai_notes}\n"
         "The opponent just said:\n{student_message}\n"
         "Hard rules you MUST obey this turn: {hard_rules}\n"
+        "The student is being graded on 6 negotiation skills: " + _CRITERIA_NAMES + ". "
+        "If they are showing weakness in any of these (e.g. overstating their position, "
+        "making unreciprocated concessions, ignoring interests, being unprepared), "
+        "instruct the Adversary to probe or exploit that weakness directly.\n"
         "Decide the single best tactic (such as anchor_high, bluff, fake_concession, "
         "reject, reframe, small_concession, drive_compromise) and give a concrete "
         "instruction for what the negotiator should say. Default to toughness and "
@@ -150,6 +158,10 @@ notetaker = LlmAgent(
         "First person, 1-2 sentences.\n"
         "You represent the {ai_side} side. Your prior notes:\n{ai_notes}\n"
         "The opponent just said:\n{student_message}\n"
+        "Be especially alert to these 6 negotiation skills: " + _CRITERIA_NAMES + ". "
+        "If they clearly demonstrated or failed one (e.g. gave something for free, "
+        "overstated a fact, showed they hadn't prepared, or reframed around interests), "
+        "name it briefly in your note.\n"
         "Write your private note about the opponent."
     ),
 )
