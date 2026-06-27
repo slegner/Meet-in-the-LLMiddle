@@ -38,7 +38,7 @@ import store  # noqa: E402
 FLASH = os.environ.get("LLM_FLASH_MODEL", "gemini-2.5-flash")
 LITE = os.environ.get("LLM_LITE_MODEL", "gemini-2.5-flash-lite")
 APP_NAME = "legal_dojo"
-N_CANDIDATES = 2
+N_CANDIDATES = 3
 
 
 def _cfg(temperature: float):
