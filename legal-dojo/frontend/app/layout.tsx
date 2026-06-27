@@ -4,7 +4,7 @@ import Link from "next/link";
 import GuideButton from "./components/GuideButton";
 
 export const metadata: Metadata = {
-  title: "LLMiddle",
+  title: "Meet in the LLMiddle",
   description: "Train against a strategic AI negotiator.",
 };
 

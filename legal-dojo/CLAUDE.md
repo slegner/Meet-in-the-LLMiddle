@@ -10,7 +10,7 @@ Legal Dojo — a gamified legal-negotiation trainer. A student picks a side of a
 
 ```bash
 # Run everything (kills stale servers, starts both, streams logs, Ctrl+C stops both)
-./start.sh                      # from legal-dojo/
+./start.sh                      # from meet-in-the-llmiddle/
 ./stop.sh                       # kill all servers
 
 # Backend only (FastAPI, port 8000) — Python 3.11, uses backend/.venv

@@ -1,4 +1,4 @@
-# LLMiddle
+# Meet in the LLMiddle
 
 A gamified legal-negotiation trainer. Pick a side of a real or parody legal dispute, negotiate against a multi-agent AI opponent, and receive a structured coaching report graded against Harvard negotiation principles.
 
@@ -9,7 +9,7 @@ Built as part of PhD research at the University of Cambridge (2025–26) on LLM-
 ## Quick start
 
 ```bash
-cd legal-dojo
+cd meet-in-the-llmiddle
 ./start.sh        # kills stale servers, starts backend (:8000) + frontend (:3000)
 # Ctrl+C to stop both
 ```
@@ -22,7 +22,7 @@ Open http://localhost:3000.
 
 ### 1. API keys
 
-You need three API keys. Create `legal-dojo/backend/.env` (this file is gitignored — never commit it):
+You need three API keys. Create `meet-in-the-llmiddle/backend/.env` (this file is gitignored — never commit it):
 
 ```
 GEMINI_API_KEY=...       # Google AI Studio — free tier works, billed key recommended
@@ -38,7 +38,7 @@ Where to get each key:
 ### 2. Backend (Python 3.11)
 
 ```bash
-cd legal-dojo/backend
+cd meet-in-the-llmiddle/backend
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
@@ -46,7 +46,7 @@ python3.11 -m venv .venv
 ### 3. Frontend (Node 18+)
 
 ```bash
-cd legal-dojo/frontend
+cd meet-in-the-llmiddle/frontend
 npm install
 ```
 
@@ -55,7 +55,7 @@ npm install
 ## Running
 
 ```bash
-cd legal-dojo
+cd meet-in-the-llmiddle
 ./start.sh
 ```
 
@@ -63,11 +63,11 @@ Or separately:
 
 ```bash
 # Terminal 1 — backend
-cd legal-dojo/backend
+cd meet-in-the-llmiddle/backend
 .venv/bin/uvicorn main:app --reload --port 8000
 
 # Terminal 2 — frontend
-cd legal-dojo/frontend
+cd meet-in-the-llmiddle/frontend
 npm run dev -- --port 3000
 ```
 
@@ -190,7 +190,7 @@ Set these in `backend/.env`:
 ## Project structure
 
 ```
-legal-dojo/
+meet-in-the-llmiddle/
   backend/
     main.py              API endpoints (FastAPI)
     adk_negotiator.py    Live AI opponent — Google ADK agent team

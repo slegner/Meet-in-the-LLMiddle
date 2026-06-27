@@ -2,7 +2,7 @@
 #
 # Legal Dojo launcher: kills any stale servers, then starts the backend
 # (FastAPI/uvicorn on :8000) and frontend (Next.js on :3000) cleanly.
-# Press Ctrl+C to stop both. Logs stream to legal-dojo/logs/.
+# Press Ctrl+C to stop both. Logs stream to meet-in-the-llmiddle/logs/.
 #
 set -uo pipefail
 
@@ -65,7 +65,7 @@ echo "  ┌───────────────────────
 echo "  │  Legal Dojo is running                        │"
 echo "  │    App:  http://localhost:3000                │"
 echo "  │    API:  http://localhost:8000                │"
-echo "  │    Logs: legal-dojo/logs/{backend,frontend}.log│"
+echo "  │    Logs: meet-in-the-llmiddle/logs/{backend,frontend}.log│"
 echo "  │    Stop: Ctrl+C                               │"
 echo "  └──────────────────────────────────────────────┘"
 echo ""
