@@ -206,8 +206,16 @@ def evaluate_perception(case, session):
 # 5. Criteria checklist — Harvard-method expert grades against the 6 principles
 # ---------------------------------------------------------------------------
 
-def evaluate_criteria(case: dict[str, Any], session: dict[str, Any]) -> list[dict[str, Any]]:
-    """Grade the student against the 6 negotiation principles, quoting the transcript."""
+def evaluate_criteria(case: dict[str, Any], session: dict[str, Any],
+                      negotiation_brief: str = "") -> dict[str, Any]:
+    """Nemotron Super grades the student against the 6 Harvard principles AND
+    produces overall negotiation comments + weak spots, replacing evaluate_negotiation.
+
+    Returns:
+        comments:   2-4 sentence overall coaching paragraph (Harvard-lens)
+        weak_spots: 2-3 short weak spot strings, each naming a criterion
+        criteria:   list of 6 scored criterion dicts
+    """
     system = (
         "You are a NEGOTIATION EXPERT (Harvard-method) grading a trainee against "
         "6 defined principles of effective negotiation. For each principle, find a "
@@ -221,42 +229,55 @@ def evaluate_criteria(case: dict[str, Any], session: dict[str, Any]) -> list[dic
         for i, c in enumerate(_CRITERIA)
     )
 
+    neg_section = f"\nTACTICAL HIGHLIGHTS:\n{negotiation_brief}\n" if negotiation_brief else ""
+
     prompt = (
         f"{_player_brief(case, session['side'])}\n\n"
-        f"FULL TRANSCRIPT:\n{_full_transcript(session)}\n\n"
+        f"FULL TRANSCRIPT:\n{_full_transcript(session)}\n"
+        f"{neg_section}\n"
         f"THE 6 PRINCIPLES TO GRADE AGAINST:\n{criteria_block}\n\n"
-        "For EACH of the 6 principles return one object. "
-        "The 'quote' field must contain the student's verbatim words from the "
-        "transcript (with turn number), followed by a dash and one sentence of "
-        "context. If the principle was not demonstrated, pick the closest relevant "
-        "moment or note the absence.\n\n"
-        'Return JSON: {"criteria": ['
+        "Return JSON with three keys:\n"
+        "1. 'comments': 2-4 sentences of overall negotiation coaching. Name 2-3 "
+        "criteria by their short name and say concretely how the student performed.\n"
+        "2. 'weak_spots': list of 2-3 short weak spot strings, each naming the "
+        "relevant criterion.\n"
+        "3. 'criteria': array of exactly 6 objects — one per principle above. "
+        "Each object: 'short_name' (the criterion's short name), "
+        "'score' ('strong'|'adequate'|'weak'), "
+        "'quote' (student's verbatim words with turn number, dash, one context sentence), "
+        "'feedback' (2 sentences). If a principle was not demonstrated, note the absence.\n\n"
+        'Return JSON: {"comments": "...", "weak_spots": ["...", "..."], "criteria": ['
         '{"short_name": "...", "score": "strong|adequate|weak", '
-        '"quote": "Turn N, STUDENT: \'...\' — context sentence", '
+        '"quote": "Turn N, STUDENT: \'...\' — context", '
         '"feedback": "2 sentences"}, ...6 items]}'
     )
 
-    # Nemotron Super (reasoning model) is used here for calibrated judgment.
+    # Nemotron Super (reasoning model) — calibrated judgment with thinking enabled.
     # Falls back to Gemini if the NVIDIA key is unavailable.
     data = llm.nemotron_generate_json(prompt, system=system)
     if data is None:
         data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.5)
-    items = (data.get("criteria") if isinstance(data, dict) else None) or []
+    if not isinstance(data, dict):
+        data = {}
 
-    # Normalise and fill gaps so the frontend always gets exactly 6 items
-    result = []
+    comments = str(data.get("comments", "")).strip() or "No negotiation feedback generated."
+    weak_spots = [str(w).strip() for w in data.get("weak_spots", []) if str(w).strip()]
+
+    items = data.get("criteria") or []
+    criteria = []
     for i, c in enumerate(_CRITERIA):
         raw = items[i] if i < len(items) else {}
         score = str(raw.get("score", "adequate"))
         if score not in ("strong", "adequate", "weak"):
             score = "adequate"
-        result.append({
+        criteria.append({
             "short_name": c["title"],
             "score": score,
             "quote": str(raw.get("quote", "")).strip() or "Not clearly demonstrated in this session.",
             "feedback": str(raw.get("feedback", "")).strip() or "Play more turns to generate specific feedback.",
         })
-    return result
+
+    return {"comments": comments, "weak_spots": weak_spots, "criteria": criteria}
 
 
 # ---------------------------------------------------------------------------
@@ -358,15 +379,31 @@ def analyse_weak_spots(current_spots: list[str], profile: dict[str, Any]) -> dic
 
 def compose_report(case: dict[str, Any], session: dict[str, Any],
                    accepted: bool = False) -> dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
     import player_memory as _pm
-    profile = _pm.load_profile()
 
-    briefs = split_material(case, session)
-    legal = evaluate_legal(case, session, briefs["legal"])
-    negotiation = evaluate_negotiation(case, session, briefs["negotiation"])
-    perception = evaluate_perception(case, session)
-    criteria = evaluate_criteria(case, session)
-    deal = evaluate_deal(case, session) if accepted else None
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        # Wave 0: everything with no inter-evaluator dependency starts immediately
+        fut_briefs     = ex.submit(split_material, case, session)
+        fut_perception = ex.submit(evaluate_perception, case, session)
+        fut_deal       = ex.submit(evaluate_deal, case, session) if accepted else None
+        fut_profile    = ex.submit(_pm.load_profile)
+
+        # Gate on briefs only — perception/deal/profile keep running in the background
+        briefs = fut_briefs.result()
+
+        # Wave 1: brief-dependent evaluators; Nemotron is the critical path
+        fut_legal    = ex.submit(evaluate_legal, case, session, briefs["legal"])
+        fut_criteria = ex.submit(evaluate_criteria, case, session, briefs["negotiation"])
+
+        legal           = fut_legal.result()
+        criteria_result = fut_criteria.result()
+        perception      = fut_perception.result()
+        deal            = fut_deal.result() if fut_deal else None
+        profile         = fut_profile.result()
+
+    negotiation = {"comments": criteria_result["comments"], "weak_spots": criteria_result["weak_spots"]}
+    criteria = criteria_result["criteria"]
 
     all_weak = legal["weak_spots"] + negotiation["weak_spots"] + perception["weak_spots"]
     weak_spot_analysis = analyse_weak_spots(all_weak, profile)

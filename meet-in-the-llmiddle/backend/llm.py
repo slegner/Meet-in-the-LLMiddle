@@ -119,7 +119,7 @@ def nemotron_generate_json(prompt: str, system: str = "") -> Any:
     messages.append({"role": "user", "content": prompt})
 
     try:
-        stream = _nvidia_client().chat.completions.create(
+        resp = _nvidia_client().chat.completions.create(
             model=_NVIDIA_MODEL,
             messages=messages,
             temperature=1,
@@ -127,20 +127,11 @@ def nemotron_generate_json(prompt: str, system: str = "") -> Any:
             max_tokens=2048,
             extra_body={
                 "chat_template_kwargs": {"enable_thinking": True},
-                "reasoning_budget": 1024,
+                "reasoning_budget": 512,
             },
-            stream=True,
+            stream=False,
         )
-        answer_parts: list[str] = []
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            # reasoning_content = thinking tokens (we skip them — Nemotron thinks privately)
-            content = getattr(delta, "content", None)
-            if content:
-                answer_parts.append(content)
-        text = "".join(answer_parts).strip()
+        text = (resp.choices[0].message.content or "").strip()
         return _parse_json(text)
     except Exception as exc:
         import traceback
