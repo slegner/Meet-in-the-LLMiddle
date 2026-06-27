@@ -122,6 +122,9 @@ function Scene() {
 
   function onInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
+    // If the user edits during the voice auto-send window, they take over manually.
+    pendingVoiceTextRef.current = null;
+    setVoicePending(false);
     // First keystroke switches from idle timer to (longer) response timer
     if (timerOnRef.current && !isTypingRef.current && e.target.value.trim()) {
       isTypingRef.current = true;
@@ -157,6 +160,10 @@ function Scene() {
   const chunksRef = useRef<Blob[]>([]);
   const silenceRafRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Holds the transcribed text while the 1-second "show before send" window is open.
+  // Cleared if the user edits the textarea (they take over manually).
+  const pendingVoiceTextRef = useRef<string | null>(null);
+  const [voicePending, setVoicePending] = useState(false);
 
   function speak(text: string) {
     if (!voiceOn || !text) return;
@@ -247,7 +254,19 @@ function Scene() {
       setTranscribing(true);
       try {
         const text = await transcribeAudio(blob);
-        if (text) await sendMessage(text);
+        if (text) {
+          // Show the transcript in the textarea so the user can read (and edit) it.
+          // Auto-send after 1 s unless the user modifies the field (which clears pendingVoiceTextRef).
+          setInput(text);
+          pendingVoiceTextRef.current = text;
+          setVoicePending(true);
+          await new Promise<void>((r) => setTimeout(r, 1000));
+          setVoicePending(false);
+          if (pendingVoiceTextRef.current === text && voiceModeRef.current) {
+            pendingVoiceTextRef.current = null;
+            await sendMessage(text);
+          }
+        }
       } catch {}
       setTranscribing(false);
     };
@@ -487,8 +506,9 @@ function Scene() {
                       value={input}
                       onChange={onInputChange}
                       onKeyDown={onKeyDown}
-                      placeholder="Type your argument… (Enter to send)"
+                      placeholder={transcribing ? "Transcribing…" : "Type your argument… (Enter to send)"}
                       disabled={sending}
+                      style={voicePending ? { borderColor: "var(--accent)", boxShadow: "0 0 0 2px rgba(198,160,79,0.25)" } : undefined}
                     />
                     <button
                       className={`btn ${voiceMode ? "" : "btn-secondary"}`}
