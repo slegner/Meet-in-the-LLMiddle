@@ -1,4 +1,4 @@
-# Meet at the LLMiddle — Technical Project Report
+# LLMiddle — Technical Project Report
 
 **University of Cambridge · PhD Research 2025–26**
 **Domain:** LLM-mediated legal negotiation training
@@ -18,7 +18,7 @@ Legal negotiation is a core professional skill that is difficult to practise sys
 
 ## 2. System Overview
 
-Meet at the LLMiddle is a full-stack web application. The student selects a two-sided legal dispute, chooses a party to represent, and negotiates in a turn-based text (or voice) interface against a multi-agent AI system. At the end of the session, a coaching pipeline evaluates the student's performance and generates a structured report.
+LLMiddle is a full-stack web application. The student selects a two-sided legal dispute, chooses a party to represent, and negotiates in a turn-based text (or voice) interface against a multi-agent AI system. At the end of the session, a coaching pipeline evaluates the student's performance and generates a structured report.
 
 **Stack:** FastAPI (Python 3.11) backend · Next.js App Router (TypeScript) frontend · JSON file state (no database) · Google ADK for the live opponent · Gemini Flash for the evaluator pipeline · Nemotron Super for criteria grading · Perplexity for legal lookups.
 

@@ -1,4 +1,4 @@
-# Meet at the LLMiddle
+# LLMiddle
 
 A gamified legal-negotiation trainer. Pick a side of a real or parody legal dispute, negotiate against a multi-agent AI opponent, and receive a structured coaching report graded against Harvard negotiation principles.
 

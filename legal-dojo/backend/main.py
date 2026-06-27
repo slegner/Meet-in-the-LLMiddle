@@ -29,7 +29,7 @@ from models import (
     TtsRequest,
 )
 
-app = FastAPI(title="Meet at the LLMiddle API", version="0.2.0")
+app = FastAPI(title="LLMiddle API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
