@@ -69,6 +69,7 @@ export interface Report {
   case_title: string;
   side: Side;
   turns: number;
+  tokens_used?: number;
   summary: string;
   legal: EvalBlock;
   negotiation: EvalBlock;

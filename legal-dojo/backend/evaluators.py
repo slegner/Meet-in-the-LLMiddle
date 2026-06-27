@@ -138,6 +138,7 @@ def compose_report(case: dict[str, Any], session: dict[str, Any]) -> dict[str, A
         "case_title": case["title"],
         "side": session["side"],
         "turns": len(session.get("turns", [])),
+        "tokens_used": sum(t.get("tokens", 0) for t in session.get("turns", [])),
         "summary": summary,
         "legal": legal,
         "negotiation": negotiation,

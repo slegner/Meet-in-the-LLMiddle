@@ -21,10 +21,11 @@ import store
 
 MAX_TRANSCRIPT_TURNS = 12
 
-# Fast mode (default): 2 LLM calls per turn (Adversary + NoteTaker), driven by
-# the deterministic concession rules, instead of the full 4-call pipeline
-# (Director -> 5 candidates -> Predictor -> NoteTaker). Set LLM_FAST_MODE=0 for
-# the full multi-agent strategy at the cost of latency and quota.
+# Orchestration backend:
+#   USE_ADK=1 (default) -> the 4-agent ADK team in adk_negotiator.py.
+#   USE_ADK=0           -> the hand-rolled path below. With LLM_FAST_MODE=1 that
+#                          path is 2 calls/turn; with 0 it's the full pipeline.
+USE_ADK = os.environ.get("USE_ADK", "1") == "1"
 FAST_MODE = os.environ.get("LLM_FAST_MODE", "1") == "1"
 
 
@@ -237,6 +238,11 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
     deterministic concession rules. Full mode: Director -> 5 candidates ->
     Predictor -> NoteTaker. Mutates `session` and returns the new turn dict.
     """
+    if USE_ADK:
+        import adk_negotiator
+
+        return adk_negotiator.run_turn(case, session, student_message)
+
     ai = store.ai_packet(case, session["side"])
     state = session.setdefault("concession_state", concession.init_state())
     plan = concession.plan_turn(state, student_message)

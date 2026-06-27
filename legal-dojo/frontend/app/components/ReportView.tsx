@@ -7,6 +7,7 @@ export default function ReportView({ sid, report }: { sid: string; report: Repor
     <div>
       <p className="muted" style={{ marginTop: 0 }}>
         {report.case_title} · played as {report.side} · {report.turns} turns
+        {report.tokens_used ? ` · ~${report.tokens_used.toLocaleString()} Gemini tokens used` : ""}
       </p>
 
       <div className="eval">
