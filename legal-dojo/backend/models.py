@@ -27,6 +27,10 @@ class ChatResponse(BaseModel):
     phase: str
 
 
+class EndRequest(BaseModel):
+    accepted: bool = False
+
+
 class TtsRequest(BaseModel):
     text: str
 

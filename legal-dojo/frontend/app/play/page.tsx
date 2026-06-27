@@ -169,10 +169,10 @@ function Scene() {
     }
   }
 
-  async function end() {
+  async function end(accepted = false) {
     setEnding(true);
     try {
-      setReport(await endSession(sid));
+      setReport(await endSession(sid, accepted));
       setEnded(true);
       localStorage.removeItem(ACTIVE_KEY);
     } catch {
@@ -205,7 +205,16 @@ function Scene() {
         >
           📁 {caseFileOpen ? "Close File" : "Case File"}
         </button>
-        <button className="btn btn-danger" onClick={end} disabled={ending || ended}>
+        <button
+          className="btn"
+          style={{ background: "var(--good)", color: "#0a2010" }}
+          onClick={() => end(true)}
+          disabled={ending || ended || turns < 1}
+          title="Accept the deal on the table and receive your coaching report"
+        >
+          {ending ? "Scoring…" : "🤝 Accept Deal"}
+        </button>
+        <button className="btn btn-danger" onClick={() => end(false)} disabled={ending || ended}>
           {ending ? "Scoring…" : ended ? "Ended" : "⏹ End"}
         </button>
         <button

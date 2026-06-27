@@ -122,23 +122,66 @@ def evaluate_perception(case, session):
 
 
 # ---------------------------------------------------------------------------
+# 5. Deal assessment (only when the student accepted a deal)
+# ---------------------------------------------------------------------------
+
+def evaluate_deal(case: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
+    """Compare the accepted deal to the student's BATNA and stated goal."""
+    side = session["side"]
+    s = case["sides"][side]
+    system = (
+        "You are a DEAL ASSESSMENT EXPERT. The student has just accepted a negotiated "
+        "deal. Read the transcript and identify the final agreed terms, then judge "
+        "whether the outcome is above, at, or below the student's BATNA."
+    )
+    prompt = (
+        f"Case: {case['title']}\n"
+        f"Student's side: {side.upper()}\n"
+        f"Student's goal: {s['goal']}\n"
+        f"Student's BATNA: {s['batna']}\n\n"
+        f"TRANSCRIPT:\n{_full_transcript(session)}\n\n"
+        "Based on the final exchanges, identify the key terms that were agreed and "
+        "assess the outcome. Return JSON:\n"
+        '{"verdict": "above_batna|at_batna|below_batna", '
+        '"deal_terms": "<1-2 sentences summarising what was agreed>", '
+        '"comments": "<2-3 sentences: how the deal compares to the BATNA and goal, '
+        'and what the student could have pushed for>"}'
+    )
+    data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.4)
+    if not isinstance(data, dict):
+        data = {}
+    verdict = str(data.get("verdict", "at_batna"))
+    if verdict not in ("above_batna", "at_batna", "below_batna"):
+        verdict = "at_batna"
+    return {
+        "verdict": verdict,
+        "deal_terms": str(data.get("deal_terms", "Terms not clearly identified.")).strip(),
+        "comments": str(data.get("comments", "")).strip() or "No deal assessment generated.",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
-def compose_report(case: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
+def compose_report(case: dict[str, Any], session: dict[str, Any],
+                   accepted: bool = False) -> dict[str, Any]:
     briefs = split_material(case, session)
     legal = evaluate_legal(case, session, briefs["legal"])
     negotiation = evaluate_negotiation(case, session, briefs["negotiation"])
     perception = evaluate_perception(case, session)
+    deal = evaluate_deal(case, session) if accepted else None
 
     all_weak = legal["weak_spots"] + negotiation["weak_spots"] + perception["weak_spots"]
-    summary = _summarize(case, session, legal, negotiation, perception)
+    summary = _summarize(case, session, legal, negotiation, perception, deal)
 
     return {
         "case_title": case["title"],
         "side": session["side"],
         "turns": len(session.get("turns", [])),
         "tokens_used": sum(t.get("tokens", 0) for t in session.get("turns", [])),
+        "accepted": accepted,
+        "deal": deal,
         "summary": summary,
         "legal": legal,
         "negotiation": negotiation,
@@ -147,9 +190,13 @@ def compose_report(case: dict[str, Any], session: dict[str, Any]) -> dict[str, A
     }
 
 
-def _summarize(case, session, legal, negotiation, perception) -> str:
+def _summarize(case, session, legal, negotiation, perception, deal=None) -> str:
+    deal_line = ""
+    if deal:
+        deal_line = f"The student accepted a deal ({deal['verdict'].replace('_', ' ')}): {deal['deal_terms']}\n"
     prompt = (
         f"Case: {case['title']}. The student played {session['side']}.\n"
+        f"{deal_line}"
         f"Legal feedback: {legal['comments']}\n"
         f"Negotiation feedback: {negotiation['comments']}\n"
         f"How the opponent perceived them: {perception['comments']}\n\n"

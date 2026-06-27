@@ -15,6 +15,7 @@ from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from models import (
     ChatRequest,
     ChatResponse,
+    EndRequest,
     ProfileModel,
     StartRequest,
     StartResponse,
@@ -129,14 +130,14 @@ def chat(sid: str, req: ChatRequest):
 
 
 @app.post("/sessions/{sid}/end")
-def end_session(sid: str):
+def end_session(sid: str, req: EndRequest = EndRequest()):
     try:
         session = store.load_session(sid)
         case = store.load_case(session["case_id"])
     except FileNotFoundError:
         raise HTTPException(404, "Session not found")
 
-    report = evaluators.compose_report(case, session)
+    report = evaluators.compose_report(case, session, accepted=req.accepted)
     session["report"] = report
     session["summary"] = evaluators.short_summary(report)
     session["status"] = "ended"

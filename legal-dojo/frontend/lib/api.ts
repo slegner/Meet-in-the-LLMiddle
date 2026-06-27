@@ -65,11 +65,19 @@ export interface EvalBlock {
   weak_spots: string[];
 }
 
+export interface DealAssessment {
+  verdict: "above_batna" | "at_batna" | "below_batna";
+  deal_terms: string;
+  comments: string;
+}
+
 export interface Report {
   case_title: string;
   side: Side;
   turns: number;
   tokens_used?: number;
+  accepted?: boolean;
+  deal?: DealAssessment | null;
   summary: string;
   legal: EvalBlock;
   negotiation: EvalBlock;
@@ -114,8 +122,8 @@ export const getCaseFile = (sid: string) =>
   getJSON<CaseFile>(`/sessions/${sid}/casefile`);
 export const postChat = (sid: string, message: string) =>
   send<ChatResponse>("POST", `/sessions/${sid}/chat`, { message });
-export const endSession = (sid: string) =>
-  send<Report>("POST", `/sessions/${sid}/end`);
+export const endSession = (sid: string, accepted = false) =>
+  send<Report>("POST", `/sessions/${sid}/end`, { accepted });
 export const getReport = (sid: string) => getJSON<Report>(`/sessions/${sid}/report`);
 export interface TurnRecord {
   n: number;
