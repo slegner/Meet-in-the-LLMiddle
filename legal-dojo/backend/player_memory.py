@@ -21,8 +21,8 @@ _DEFAULT: dict[str, Any] = {
     "display_name": "Trainee",
     "notes": "Editable notes about your negotiation style and goals. Add anything you want the trainer to remember.",
     "observations": [],
-    "timer_idle_secs": 120,
-    "timer_response_secs": 300,
+    "timer_idle_secs": 30,
+    "timer_response_secs": 120,
     "updated_at": None,
 }
 

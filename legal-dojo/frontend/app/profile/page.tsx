@@ -82,8 +82,8 @@ export default function ProfilePage() {
 
   async function save() {
     if (!profile) return;
-    const idleSecs = Math.max(10, parseInt(idleStr) || 120);
-    const responseSecs = Math.max(60, Math.round((parseFloat(responseStr) || 5) * 60));
+    const idleSecs = Math.max(10, parseInt(idleStr) || 30);
+    const responseSecs = Math.max(60, Math.round((parseFloat(responseStr) || 2) * 60));
     const toSave = { ...profile, timer_idle_secs: idleSecs, timer_response_secs: responseSecs };
     setStatus("Saving…");
     try {

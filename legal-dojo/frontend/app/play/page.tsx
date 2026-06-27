@@ -88,8 +88,8 @@ function Scene() {
 
   // ── Timer ──────────────────────────────────────────────────────────────────
   // Defaults; overwritten from profile on mount
-  const idleSecsRef = useRef(120);
-  const responseSecsRef = useRef(300);
+  const idleSecsRef = useRef(30);
+  const responseSecsRef = useRef(120);
   const [timerOn, setTimerOn] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   // Refs so timer callbacks read current values without stale closures
