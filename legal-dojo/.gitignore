@@ -1,0 +1,17 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Session state (runtime data)
+backend/data/sessions/*.json
+backend/data/player_profile.json
+
+# Node / Next
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+
+# Env
+.env
+.env.local

@@ -1,0 +1,58 @@
+{
+  "id": "riverside_lofts",
+  "title": "Riverside Lofts — Commercial Lease Dispute",
+  "summary": "A flooded café, three months of withheld rent, and a forfeiture notice with the clock running. Settle before it goes to court.",
+  "background": "Riverside Lofts Ltd, a boutique landlord, leased a ground-floor unit on Mill Street to Ada Okafor, founder of 'Cobalt Coffee', under a five-year commercial lease at £3,100/month. Eighteen months in, a burst pipe in the unit above caused water damage that closed Cobalt Coffee for six weeks (42 days, per an independent loss adjuster). Ada withheld three months of rent (£9,300) to offset lost revenue and the £8,400 she paid out of pocket for emergency repairs. Riverside has served a notice threatening forfeiture of the lease unless the arrears are paid in full within 14 days. Clause 7 of the lease puts the building's structure and pipework in the landlord's repairing responsibility; Clause 12 permits forfeiture for rent unpaid more than 21 days. Both sides would prefer to avoid litigation. You are meeting opposing counsel to negotiate a settlement before the notice period expires.",
+  "shared_documents": [
+    {
+      "name": "Lease Agreement (executed)",
+      "summary": "Five-year term, current monthly rent £3,100. Clause 7 obliges the landlord to keep the structure and common parts (including pipework serving the building) in repair. Clause 12 permits forfeiture for rent unpaid more than 21 days."
+    },
+    {
+      "name": "Loss-adjuster report",
+      "summary": "Independent report confirms the water ingress originated in the unit above (landlord's repairing responsibility) and that the premises were unusable for 42 days. Estimates direct repair cost at £8,400."
+    },
+    {
+      "name": "Rent ledger & correspondence",
+      "summary": "Shows three months withheld (£9,300 arrears) and a chain of emails in which Ada notified the landlord of the flood within 24 hours and requested abatement, which the landlord did not formally answer."
+    }
+  ],
+  "sides": {
+    "tenant": {
+      "role": "You are counsel for Ada Okafor (the tenant, Cobalt Coffee). Negotiate a resolution that keeps your client in the premises, fairly accounts for the flood losses, and avoids forfeiture — without conceding more than the facts require.",
+      "goal": "Keep the lease, secure rent abatement for the 42-day closure and credit for the £8,400 repairs, and restructure the remaining arrears into affordable instalments.",
+      "batna": "If talks fail, apply to court for relief from forfeiture (tenants are very often granted it) and counterclaim for breach of the Clause 7 repairing covenant. Litigation is slow and costly, and Cobalt Coffee's cash is tight — so a negotiated deal is strongly preferred.",
+      "private_facts": [
+        "Ada can realistically only pay about £400/month toward arrears on top of ongoing rent.",
+        "Cobalt Coffee's revenue has recovered but reserves are nearly empty; a forfeiture would end the business.",
+        "Ada would privately accept keeping the lease plus roughly £6,000 of total relief (abatement + repair credit) as a good outcome.",
+        "She did wait 9 days before commissioning repairs because she was chasing the landlord to act first."
+      ],
+      "objectives": [
+        "Avoid forfeiture and retain the lease on the Mill Street unit.",
+        "Obtain rent abatement or credit for the 42 days the unit was unusable.",
+        "Recover or offset the £8,400 paid out of pocket for emergency repairs.",
+        "Restructure the outstanding arrears into a manageable repayment schedule.",
+        "Preserve a workable long-term relationship with the landlord."
+      ]
+    },
+    "landlord": {
+      "role": "You are counsel for Riverside Lofts Ltd (the landlord). Recover the arrears and protect the lease covenants, while avoiding a costly relief-from-forfeiture fight and a vacant unit in a soft market.",
+      "goal": "Recover as much of the £9,300 arrears as possible, re-establish reliable monthly payment, and limit any abatement or repair credit conceded for the flood.",
+      "batna": "If talks fail, pursue forfeiture and re-let — but the market is soft, a vacancy could last months, and a court would likely grant the tenant relief from forfeiture and may find the landlord breached Clause 7. So forcing it out is risky and a negotiated deal is preferred.",
+      "private_facts": [
+        "Re-letting the unit in this market would likely take 4-6 months and cost agent fees, so an empty unit is expensive.",
+        "The landlord's insurer is disputing the upstairs-pipe claim, so Riverside is exposed on the repair cost.",
+        "Riverside would privately accept writing off up to ~£5,000 (abatement + repair credit combined) to keep a paying tenant.",
+        "The landlord did ignore Ada's abatement emails, which is a weak point if this reaches a judge."
+      ],
+      "objectives": [
+        "Recover the maximum realistic share of the £9,300 arrears.",
+        "Restore reliable monthly rent payment going forward.",
+        "Minimise abatement and repair credit conceded for the flood closure.",
+        "Avoid the cost and delay of forfeiture, re-letting, and a relief-from-forfeiture claim.",
+        "Preserve the landlord's position under the lease covenants."
+      ]
+    }
+  }
+}

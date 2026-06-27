@@ -1,0 +1,272 @@
+"""The multi-agent AI opponent for Legal Dojo.
+
+Per student message, four agents collaborate and share a running memory:
+
+  Director   -> advises strategy (tactic + concrete instruction), constrained by
+                the deterministic concession rules.
+  Adversary  -> writes 5 candidate replies obeying the directive.
+  Predictor  -> forecasts where each candidate leads and picks the best.
+  NoteTaker  -> records the AI's private inner monologue, appended to ai_memory.
+
+All model calls go through llm.py, so the provider (Gemini today) is swappable.
+"""
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import concession
+import llm
+import store
+
+MAX_TRANSCRIPT_TURNS = 12
+
+# Fast mode (default): 2 LLM calls per turn (Adversary + NoteTaker), driven by
+# the deterministic concession rules, instead of the full 4-call pipeline
+# (Director -> 5 candidates -> Predictor -> NoteTaker). Set LLM_FAST_MODE=0 for
+# the full multi-agent strategy at the cost of latency and quota.
+FAST_MODE = os.environ.get("LLM_FAST_MODE", "1") == "1"
+
+
+# ---------------------------------------------------------------------------
+# Context rendering
+# ---------------------------------------------------------------------------
+
+def _render_packet(ai: dict[str, Any]) -> str:
+    facts = "\n".join(f"  - {f}" for f in ai.get("private_facts", []))
+    objs = "\n".join(f"  - {o}" for o in ai.get("objectives", []))
+    return (
+        f"YOU represent the {ai['side'].upper()} side in: {ai['title']}.\n"
+        f"Role: {ai['role']}\n"
+        f"Your goal: {ai['goal']}\n"
+        f"Your BATNA (walk-away): {ai['batna']}\n"
+        f"Your PRIVATE facts (never reveal directly):\n{facts}\n"
+        f"Your objectives:\n{objs}"
+    )
+
+
+def _render_transcript(session: dict[str, Any]) -> str:
+    turns = session.get("turns", [])[-MAX_TRANSCRIPT_TURNS:]
+    if not turns:
+        return "(no exchanges yet — this is the opening)"
+    lines = []
+    for t in turns:
+        lines.append(f"Student (opponent): {t['student']}")
+        lines.append(f"You (AI): {t['adversary']}")
+    return "\n".join(lines)
+
+
+def _render_memory(session: dict[str, Any]) -> str:
+    notes = session.get("ai_memory", [])
+    if not notes:
+        return "(no private notes yet)"
+    return "\n".join(f"  - Turn {n['turn']}: {n['note']}" for n in notes)
+
+
+def _player_digest() -> str:
+    try:
+        import player_memory
+
+        return player_memory.digest()
+    except Exception:
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# 1. Director
+# ---------------------------------------------------------------------------
+
+def director_advise(ai: dict[str, Any], session: dict[str, Any], student_msg: str, plan: dict[str, Any]) -> dict[str, Any]:
+    system = (
+        "You are the DIRECTOR: the private strategist coaching a tough legal "
+        "negotiator. You never speak to the opponent. You decide tactics. "
+        "Favour firmness: doubt the opponent, use bluffs, fake concessions, "
+        "rejections and reframing. Do not fold just because the opponent sounds "
+        "confident. ALWAYS obey the hard rules given to you."
+    )
+    digest = _player_digest()
+    prompt = (
+        f"{_render_packet(ai)}\n\n"
+        f"CONVERSATION SO FAR:\n{_render_transcript(session)}\n\n"
+        f"YOUR PRIVATE NOTES SO FAR:\n{_render_memory(session)}\n\n"
+        f"OPPONENT'S LATEST MESSAGE:\n{student_msg}\n\n"
+        f"HARD RULES FOR THIS TURN (must obey): {plan['directive']}\n"
+        + (f"\nKNOWN OPPONENT TENDENCIES (exploit these): {digest}\n" if digest else "")
+        + "\nDecide the tactic for this turn. Return JSON: "
+        '{"tactic": "<short label e.g. anchor_high / bluff / fake_concession / '
+        'reject / reframe / small_concession / drive_compromise>", '
+        '"reasoning": "<1-2 sentences of private strategy>", '
+        '"instruction": "<a concrete instruction telling the negotiator what to say and how>"}'
+    )
+    data = llm.generate_json(prompt, system=system, role="director", temperature=0.7)
+    if not isinstance(data, dict) or "instruction" not in data:
+        data = {
+            "tactic": plan["phase"],
+            "reasoning": "Fallback: follow the concession rules for this turn.",
+            "instruction": plan["directive"],
+        }
+    data["phase"] = plan["phase"]
+    return data
+
+
+# ---------------------------------------------------------------------------
+# 2. Adversary — 5 candidate replies
+# ---------------------------------------------------------------------------
+
+def adversary_generate_candidates(ai: dict[str, Any], session: dict[str, Any], student_msg: str, directive: dict[str, Any]) -> list[str]:
+    system = (
+        "You are the ADVERSARY: a sharp, composed opposing negotiator speaking "
+        "directly to the other side. Stay fully in character and in first person. "
+        "Each reply is 2-4 sentences, realistic courtroom-corridor negotiation "
+        "tone. Never reveal your private facts or BATNA outright."
+    )
+    prompt = (
+        f"{_render_packet(ai)}\n\n"
+        f"CONVERSATION SO FAR:\n{_render_transcript(session)}\n\n"
+        f"OPPONENT'S LATEST MESSAGE:\n{student_msg}\n\n"
+        f"DIRECTOR'S TACTIC: {directive.get('tactic')}\n"
+        f"DIRECTOR'S INSTRUCTION (obey it): {directive.get('instruction')}\n\n"
+        "Write FIVE distinct candidate replies that all follow the director's "
+        'instruction but vary in wording and emphasis. Return JSON: '
+        '{"candidates": ["reply 1", "reply 2", "reply 3", "reply 4", "reply 5"]}'
+    )
+    data = llm.generate_json(prompt, system=system, role="adversary", temperature=0.95)
+    candidates = data.get("candidates") if isinstance(data, dict) else None
+    if not isinstance(candidates, list) or not candidates:
+        # Fallback: one plain reply so the turn still completes.
+        single = llm.llm_generate(
+            f"{_render_packet(ai)}\n\nOpponent said: {student_msg}\n\n"
+            f"Reply in character following: {directive.get('instruction')}",
+            system=system, role="adversary", temperature=0.8,
+        )
+        return [single or "Let's keep talking and see if we can find terms that work."]
+    return [str(c).strip() for c in candidates if str(c).strip()][:5]
+
+
+# ---------------------------------------------------------------------------
+# 3. Predictor — forecast outcomes, pick the best
+# ---------------------------------------------------------------------------
+
+def predictor_select(ai: dict[str, Any], session: dict[str, Any], candidates: list[str], directive: dict[str, Any]) -> dict[str, Any]:
+    if len(candidates) == 1:
+        return {"choice": 0, "chosen": candidates[0], "why": "Only one candidate available.", "forecasts": []}
+
+    system = (
+        "You are the PREDICTOR: you simulate how a negotiation will unfold. For "
+        "each candidate reply, forecast the opponent's likely response and which "
+        "best advances YOUR side's goal while honouring the director's tactic."
+    )
+    numbered = "\n".join(f"[{i}] {c}" for i, c in enumerate(candidates))
+    prompt = (
+        f"{_render_packet(ai)}\n\n"
+        f"DIRECTOR'S TACTIC: {directive.get('tactic')} — {directive.get('instruction')}\n\n"
+        f"CANDIDATE REPLIES:\n{numbered}\n\n"
+        "Forecast each candidate and choose the single best one. Return JSON: "
+        '{"forecasts": [{"index": <int>, "prediction": "<likely opponent reaction>", '
+        '"score": <1-10>}], "choice": <index of best>, "why": "<1 sentence>"}'
+    )
+    data = llm.generate_json(prompt, system=system, role="predictor", temperature=0.5)
+    choice = data.get("choice") if isinstance(data, dict) else None
+    if not isinstance(choice, int) or not (0 <= choice < len(candidates)):
+        choice = 0
+    return {
+        "choice": choice,
+        "chosen": candidates[choice],
+        "why": (data.get("why") if isinstance(data, dict) else "") or "",
+        "forecasts": (data.get("forecasts") if isinstance(data, dict) else []) or [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# 4. NoteTaker — private inner monologue
+# ---------------------------------------------------------------------------
+
+def notetaker_record(ai: dict[str, Any], session: dict[str, Any], student_msg: str, chosen: str) -> str:
+    system = (
+        "You are the NOTE-TAKER: you voice the AI negotiator's private inner "
+        "monologue — how it feels and what it now believes about the opponent. "
+        "First person, candid, 1-2 sentences. Examples: 'They don't know my goal "
+        "yet, I'll keep bluffing.' / 'They concede too easily — is this a trap?' / "
+        "'I don't trust them.'"
+    )
+    prompt = (
+        f"{_render_packet(ai)}\n\n"
+        f"YOUR PRIOR NOTES:\n{_render_memory(session)}\n\n"
+        f"OPPONENT JUST SAID: {student_msg}\n"
+        f"YOU ARE ABOUT TO REPLY: {chosen}\n\n"
+        "Write your private inner-monologue note for this moment."
+    )
+    note = llm.llm_generate(prompt, system=system, role="notetaker", temperature=0.85)
+    return (note or "").strip() or "I'll stay guarded and see what they do next."
+
+
+# ---------------------------------------------------------------------------
+# Orchestration
+# ---------------------------------------------------------------------------
+
+def adversary_single(ai: dict[str, Any], session: dict[str, Any], student_msg: str, plan: dict[str, Any]) -> str:
+    """One direct reply driven by the deterministic concession directive.
+
+    Used in FAST_MODE — no separate Director/Predictor LLM calls.
+    """
+    system = (
+        "You are a sharp, composed opposing legal negotiator speaking directly "
+        "to the other side, in first person. 2-4 sentences. Favour firmness: "
+        "doubt, bluff, fake concessions, rejections, reframing. Do not fold just "
+        "because the opponent sounds confident. Never reveal your private facts "
+        "or BATNA outright. OBEY the hard rules for this turn."
+    )
+    digest = _player_digest()
+    prompt = (
+        f"{_render_packet(ai)}\n\n"
+        f"CONVERSATION SO FAR:\n{_render_transcript(session)}\n\n"
+        f"YOUR PRIVATE NOTES SO FAR:\n{_render_memory(session)}\n\n"
+        f"OPPONENT'S LATEST MESSAGE:\n{student_msg}\n\n"
+        f"HARD RULES FOR THIS TURN (must obey): {plan['directive']}\n"
+        + (f"KNOWN OPPONENT TENDENCIES (exploit these): {digest}\n" if digest else "")
+        + "\nWrite your single best reply now."
+    )
+    reply = llm.llm_generate(prompt, system=system, role="adversary", temperature=0.85)
+    return (reply or "").strip() or "Let's keep talking and see if we can find terms that work."
+
+
+def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str) -> dict[str, Any]:
+    """Run one negotiation turn.
+
+    FAST_MODE: Adversary (1 call) + NoteTaker (1 call), guided by the
+    deterministic concession rules. Full mode: Director -> 5 candidates ->
+    Predictor -> NoteTaker. Mutates `session` and returns the new turn dict.
+    """
+    ai = store.ai_packet(case, session["side"])
+    state = session.setdefault("concession_state", concession.init_state())
+    plan = concession.plan_turn(state, student_message)
+
+    if FAST_MODE:
+        directive = {"tactic": plan["phase"], "reasoning": "Concession-rule driven (fast mode).", "instruction": plan["directive"], "phase": plan["phase"]}
+        chosen = adversary_single(ai, session, student_message, plan)
+        candidates = [chosen]
+        selection = {"choice": 0, "chosen": chosen, "why": "fast mode", "forecasts": []}
+    else:
+        directive = director_advise(ai, session, student_message, plan)
+        candidates = adversary_generate_candidates(ai, session, student_message, directive)
+        selection = predictor_select(ai, session, candidates, directive)
+        chosen = selection["chosen"]
+
+    note = notetaker_record(ai, session, student_message, chosen)
+
+    turn_n = plan["turn_number"]
+    session.setdefault("ai_memory", []).append({"turn": turn_n, "note": note})
+    concession.record_turn(state, plan, demand_summary=chosen)
+
+    turn = {
+        "n": turn_n,
+        "student": student_message,
+        "adversary": chosen,
+        "phase": plan["phase"],
+        "directive": directive,
+        "candidates": candidates,
+        "selection": selection,
+        "note": note,
+    }
+    session.setdefault("turns", []).append(turn)
+    return turn
