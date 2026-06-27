@@ -194,7 +194,7 @@ function Scene() {
   const speakerName = speaker === "player" ? "You" : "Opposing Counsel";
 
   return (
-    <div className="container wide">
+    <div style={{ padding: "24px 12px 80px", width: "100%", boxSizing: "border-box" }}>
 
       {/* ── Button bar ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
