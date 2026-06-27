@@ -5,10 +5,11 @@ Pipeline:
      brief.
   2. Legal agent  <- legal brief.
   3. Negotiation agent <- negotiation brief.
-  4. Perception agent <- the AI opponent's private per-turn notes. This is NOT
-     "your client" — it is *how the opponent perceived you* (confidence, tells,
-     trust), e.g. "this person didn't seem sure of their position".
-  5. Summary paragraph.
+  4. Perception agent <- the AI opponent's private per-turn notes.
+  5. Criteria agent <- same Harvard-method negotiation expert, grading the
+     student against the 6 principles from "What Makes a Good Negotiator",
+     with verbatim transcript quotes per criterion.
+  6. Summary paragraph.
 
 No numeric scoring — each agent returns qualitative comments + weak spots.
 """
@@ -17,6 +18,76 @@ from __future__ import annotations
 from typing import Any
 
 import llm
+
+# ---------------------------------------------------------------------------
+# What Makes a Good Negotiator — the 6 criteria used for structured grading
+# ---------------------------------------------------------------------------
+
+_CRITERIA = [
+    {
+        "short": "Position accuracy",
+        "full": (
+            "Pushing your position without overstating it: advocating as forcefully "
+            "as the facts and law actually support, while resisting the temptation to "
+            "inflate claims, damages estimates, or threats beyond what you can credibly "
+            "back up. Once the other side catches one exaggeration, they start "
+            "discounting everything else you say."
+        ),
+    },
+    {
+        "short": "Case preparation",
+        "full": (
+            "Knowing the facts and law and understanding the strengths and weaknesses "
+            "of both your position and the other side's: knowing the documents, timeline, "
+            "witness statements, and evidentiary record well enough that you're never "
+            "surprised by something the other side raises. If opposing counsel mentions "
+            "an email or a clause, you should already know it — not be hearing about it "
+            "for the first time across the table."
+        ),
+    },
+    {
+        "short": "Interest-based thinking",
+        "full": (
+            "Distinguishing stated positions from underlying interests: looking beyond "
+            "what people say they want (positions) to understand why they want it "
+            "(interests). By identifying underlying interests, negotiators can uncover "
+            "common ground, generate creative alternatives, and reach solutions that "
+            "satisfy the core needs of all parties rather than becoming stuck in "
+            "positional deadlock."
+        ),
+    },
+    {
+        "short": "Concession discipline",
+        "full": (
+            "Knowing when to make the first offer, how to sequence concessions, and "
+            "how to avoid giving things away for nothing: every compromise should be "
+            "exchanged for something of equal value. Concessions should be gradual and "
+            "strategic, showing flexibility without weakening your position. Never give "
+            "something away for free — ask for a concession in return."
+        ),
+    },
+    {
+        "short": "Tactical flexibility",
+        "full": (
+            "Switching between collaborative (interest-based) and competitive "
+            "(positional) tactics depending on the counterpart and stakes: when trust "
+            "is important or long-term cooperation matters, focus on shared interests "
+            "and value creation. When stakes are high or the counterpart is highly "
+            "competitive, shift to a positional style and protect key demands. The "
+            "skill lies in reading the situation early and moving fluidly between modes."
+        ),
+    },
+    {
+        "short": "Realistic expectations",
+        "full": (
+            "Keeping expectations realistic and getting authority to move before "
+            "you're at the table: ground your targets in data and likely trade-offs "
+            "rather than ideal outcomes. Know your walk-away limits, approved "
+            "concessions, and decision boundaries in advance — this prevents "
+            "'I need to check' moments that weaken your credibility."
+        ),
+    },
+]
 
 
 def _full_transcript(session: dict[str, Any]) -> str:
@@ -122,7 +193,60 @@ def evaluate_perception(case, session):
 
 
 # ---------------------------------------------------------------------------
-# 5. Deal assessment (only when the student accepted a deal)
+# 5. Criteria checklist — Harvard-method expert grades against the 6 principles
+# ---------------------------------------------------------------------------
+
+def evaluate_criteria(case: dict[str, Any], session: dict[str, Any]) -> list[dict[str, Any]]:
+    """Grade the student against the 6 negotiation principles, quoting the transcript."""
+    system = (
+        "You are a NEGOTIATION EXPERT (Harvard-method) grading a trainee against "
+        "6 defined principles of effective negotiation. For each principle, find a "
+        "specific moment in the transcript — quote the student's EXACT words with the "
+        "turn number — then score it and give two sentences of specific feedback. "
+        "Be honest: if the transcript is short or the principle was not tested, say so."
+    )
+
+    criteria_block = "\n\n".join(
+        f"[{i+1}] {c['short']}\n{c['full']}"
+        for i, c in enumerate(_CRITERIA)
+    )
+
+    prompt = (
+        f"{_player_brief(case, session['side'])}\n\n"
+        f"FULL TRANSCRIPT:\n{_full_transcript(session)}\n\n"
+        f"THE 6 PRINCIPLES TO GRADE AGAINST:\n{criteria_block}\n\n"
+        "For EACH of the 6 principles return one object. "
+        "The 'quote' field must contain the student's verbatim words from the "
+        "transcript (with turn number), followed by a dash and one sentence of "
+        "context. If the principle was not demonstrated, pick the closest relevant "
+        "moment or note the absence.\n\n"
+        'Return JSON: {"criteria": ['
+        '{"short_name": "...", "score": "strong|adequate|weak", '
+        '"quote": "Turn N, STUDENT: \'...\' — context sentence", '
+        '"feedback": "2 sentences"}, ...6 items]}'
+    )
+
+    data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.5)
+    items = (data.get("criteria") if isinstance(data, dict) else None) or []
+
+    # Normalise and fill gaps so the frontend always gets exactly 6 items
+    result = []
+    for i, c in enumerate(_CRITERIA):
+        raw = items[i] if i < len(items) else {}
+        score = str(raw.get("score", "adequate"))
+        if score not in ("strong", "adequate", "weak"):
+            score = "adequate"
+        result.append({
+            "short_name": raw.get("short_name") or c["short"],
+            "score": score,
+            "quote": str(raw.get("quote", "")).strip() or "Not clearly demonstrated in this session.",
+            "feedback": str(raw.get("feedback", "")).strip() or "Play more turns to generate specific feedback.",
+        })
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 6. Deal assessment (only when the student accepted a deal)
 # ---------------------------------------------------------------------------
 
 def evaluate_deal(case: dict[str, Any], session: dict[str, Any]) -> dict[str, Any]:
@@ -170,6 +294,7 @@ def compose_report(case: dict[str, Any], session: dict[str, Any],
     legal = evaluate_legal(case, session, briefs["legal"])
     negotiation = evaluate_negotiation(case, session, briefs["negotiation"])
     perception = evaluate_perception(case, session)
+    criteria = evaluate_criteria(case, session)
     deal = evaluate_deal(case, session) if accepted else None
 
     all_weak = legal["weak_spots"] + negotiation["weak_spots"] + perception["weak_spots"]
@@ -186,6 +311,7 @@ def compose_report(case: dict[str, Any], session: dict[str, Any],
         "legal": legal,
         "negotiation": negotiation,
         "perception": perception,
+        "criteria": criteria,
         "weak_spots": all_weak,
     }
 

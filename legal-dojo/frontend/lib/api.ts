@@ -67,6 +67,13 @@ export interface EvalBlock {
   weak_spots: string[];
 }
 
+export interface CriterionResult {
+  short_name: string;
+  score: "strong" | "adequate" | "weak";
+  quote: string;
+  feedback: string;
+}
+
 export interface DealAssessment {
   verdict: "above_batna" | "at_batna" | "below_batna";
   deal_terms: string;
@@ -84,6 +91,7 @@ export interface Report {
   legal: EvalBlock;
   negotiation: EvalBlock;
   perception: EvalBlock;
+  criteria?: CriterionResult[];
   weak_spots: string[];
 }
 

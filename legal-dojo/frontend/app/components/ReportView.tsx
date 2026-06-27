@@ -1,6 +1,25 @@
 "use client";
 
-import { type Report, reportPdfUrl } from "@/lib/api";
+import { type CriterionResult, type Report, reportPdfUrl } from "@/lib/api";
+
+const SCORE_STYLE: Record<CriterionResult["score"], { label: string; color: string; bg: string }> = {
+  strong:   { label: "✓ Strong",   color: "#0a2010", bg: "var(--good)" },
+  adequate: { label: "~ Adequate", color: "#2a1f05", bg: "var(--accent)" },
+  weak:     { label: "✗ Weak",     color: "#2a0a0a", bg: "var(--danger)" },
+};
+
+function ScoreBadge({ score }: { score: CriterionResult["score"] }) {
+  const s = SCORE_STYLE[score] ?? SCORE_STYLE.adequate;
+  return (
+    <span style={{
+      background: s.bg, color: s.color,
+      borderRadius: 5, padding: "2px 9px",
+      fontSize: 11, fontWeight: 700, whiteSpace: "nowrap",
+    }}>
+      {s.label}
+    </span>
+  );
+}
 
 const VERDICT_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   above_batna: { label: "Above BATNA — strong outcome", color: "#0a2010", bg: "var(--good)" },
@@ -61,6 +80,28 @@ export default function ReportView({ sid, report }: { sid: string; report: Repor
         <h3>👁 How Your Opponent Saw You</h3>
         <p style={{ margin: 0 }}>{report.perception.comments}</p>
       </div>
+
+      {report.criteria && report.criteria.length > 0 && (
+        <div className="eval">
+          <h3>📋 Negotiator&apos;s Checklist</h3>
+          {report.criteria.map((c, i) => (
+            <div key={i} style={{
+              paddingBottom: 14,
+              marginBottom: 14,
+              borderBottom: i < report.criteria!.length - 1 ? "1px solid var(--border)" : "none",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{c.short_name}</span>
+                <ScoreBadge score={c.score} />
+              </div>
+              <p style={{ margin: "0 0 5px", fontStyle: "italic", fontSize: 13, color: "var(--muted)" }}>
+                {c.quote}
+              </p>
+              <p style={{ margin: 0, fontSize: 13 }}>{c.feedback}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="eval">
         <h3>Weak Spots to Work On</h3>
