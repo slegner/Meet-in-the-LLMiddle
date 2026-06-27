@@ -166,3 +166,12 @@ export const ttsUrl = (text: string) =>
 
 export const reportPdfUrl = (sid: string) => `${API_BASE}/sessions/${sid}/report.pdf`;
 export const transcriptUrl = (sid: string) => `${API_BASE}/sessions/${sid}/transcript`;
+
+export async function transcribeAudio(blob: Blob): Promise<string> {
+  const form = new FormData();
+  form.append("audio", blob, "recording.webm");
+  const res = await fetch(`${API_BASE}/transcribe`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(`Transcribe failed: ${res.status}`);
+  const data = await res.json();
+  return (data.text as string) ?? "";
+}

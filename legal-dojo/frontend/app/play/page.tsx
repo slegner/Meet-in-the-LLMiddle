@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { postChat, endSession, nudgeSession, getSession, getCaseFile, getProfile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
+import { postChat, endSession, nudgeSession, getSession, getCaseFile, getProfile, ttsUrl, transcribeAudio, type Report, type CaseFile } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
 import HistoryOverlay from "../components/HistoryOverlay";
@@ -149,6 +149,11 @@ function Scene() {
   const [voiceOn, setVoiceOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
   function speak(text: string) {
     if (!voiceOn || !text) return;
     try {
@@ -210,6 +215,34 @@ function Scene() {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+  }
+
+  async function toggleMic() {
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream);
+    chunksRef.current = [];
+    mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      setRecording(false);
+      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      setTranscribing(true);
+      try {
+        const text = await transcribeAudio(blob);
+        if (text) setInput(text);
+      } catch {
+        // silently ignore transcription errors
+      } finally {
+        setTranscribing(false);
+      }
+    };
+    mr.start();
+    mediaRecorderRef.current = mr;
+    setRecording(true);
   }
 
   async function send() {
@@ -391,6 +424,15 @@ function Scene() {
                       placeholder="Type your argument… (Enter to send)"
                       disabled={sending}
                     />
+                    <button
+                      className="btn btn-secondary"
+                      onClick={toggleMic}
+                      disabled={sending || transcribing}
+                      title={recording ? "Stop recording" : "Speak your argument"}
+                      style={recording ? { background: "#c0392b", color: "#fff", borderColor: "#c0392b" } : undefined}
+                    >
+                      {transcribing ? "…" : recording ? "⏹ Stop" : "🎤"}
+                    </button>
                     <button className="btn" onClick={send} disabled={sending || !input.trim()}>Send</button>
                   </div>
                 )}

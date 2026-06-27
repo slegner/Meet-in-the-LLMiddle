@@ -1,6 +1,8 @@
 """Legal Dojo FastAPI backend (v2 — gamified multi-agent trainer)."""
 from __future__ import annotations
 
+import os
+import tempfile
 from datetime import datetime, timezone
 
 import agents
@@ -11,7 +13,7 @@ import player_memory
 import report_pdf
 import store
 import tts as tts_module
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from models import (
@@ -277,3 +279,33 @@ def get_player_memory():
 @app.put("/player-memory")
 def put_player_memory(profile: ProfileModel):
     return player_memory.save_profile(profile.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# Speech-to-text (local Whisper, lazy-loaded)
+# ---------------------------------------------------------------------------
+
+_whisper_model = None
+
+
+def _get_whisper():
+    global _whisper_model
+    if _whisper_model is None:
+        import whisper
+        _whisper_model = whisper.load_model("small")
+    return _whisper_model
+
+
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    data = await audio.read()
+    filename = audio.filename or "recording.webm"
+    ext = os.path.splitext(filename)[1] or ".webm"
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+        f.write(data)
+        tmp_path = f.name
+    try:
+        result = _get_whisper().transcribe(tmp_path, language="en", temperature=0.0)
+        return {"text": result["text"].strip()}
+    finally:
+        os.unlink(tmp_path)
