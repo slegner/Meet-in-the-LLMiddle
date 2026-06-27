@@ -44,6 +44,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionCard[] | null>(null);
   const [openReport, setOpenReport] = useState<{ sid: string; report: Report } | null>(null);
+  const [fadingOpen, setFadingOpen] = useState(false);
 
   useEffect(() => {
     getProfile().then(setProfile).catch(() => setError("Could not load your profile."));
@@ -86,7 +87,6 @@ export default function ProfilePage() {
 
   const fresh = profile.observations.filter((o) => o.sessions_since_last_seen === 0);
   const fading = profile.observations.filter((o) => o.sessions_since_last_seen > 0);
-  const [fadingOpen, setFadingOpen] = useState(false);
 
   return (
     <div className="container" style={{ maxWidth: 1280 }}>
