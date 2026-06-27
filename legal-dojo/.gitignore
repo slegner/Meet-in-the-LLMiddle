@@ -11,6 +11,7 @@ backend/data/player_profile.json
 frontend/node_modules/
 frontend/.next/
 frontend/next-env.d.ts
+frontend/*.tsbuildinfo
 
 # Env
 .env
