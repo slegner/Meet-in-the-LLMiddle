@@ -84,6 +84,9 @@ def build_report_pdf(case: dict[str, Any], session: dict[str, Any]) -> bytes:
         pdf.h2("Summary")
         pdf.body(report.get("summary", ""))
 
+        _score_label = {"strong": "STRONG", "adequate": "ADEQUATE", "weak": "WEAK"}
+        _score_color = {"strong": (30, 120, 50), "adequate": (160, 110, 10), "weak": (160, 30, 30)}
+
         for key, title in (
             ("legal", "Legal Review"),
             ("negotiation", "Negotiation Expert"),
@@ -95,29 +98,24 @@ def build_report_pdf(case: dict[str, Any], session: dict[str, Any]) -> bytes:
             for w in block.get("weak_spots", []):
                 pdf.body(f"  - {w}")
 
-        criteria = report.get("criteria", [])
-        if criteria:
-            pdf.h2("Performance Checklist")
-            _score_label = {"strong": "STRONG", "adequate": "ADEQUATE", "weak": "WEAK"}
-            _score_color = {"strong": (30, 120, 50), "adequate": (160, 110, 10), "weak": (160, 30, 30)}
-            for i, c in enumerate(criteria):
-                score = c.get("score", "adequate")
-                r, g, b = _score_color.get(score, (80, 80, 80))
-                pdf.ln(1)
-                # Criterion title + score badge on same line
-                pdf.set_font("Helvetica", "B", 10.5)
-                pdf.set_text_color(20)
-                pdf.set_x(pdf.l_margin)
-                label = _score_label.get(score, score.upper())
-                pdf.cell(0, 6, _clean(f"{i+1}. {c.get('short_name', '')}"), new_x="LMARGIN", new_y="NEXT")
-                pdf.set_font("Helvetica", "B", 9)
-                pdf.set_text_color(r, g, b)
-                pdf.set_x(pdf.l_margin)
-                pdf.cell(0, 5, f"[{label}]", new_x="LMARGIN", new_y="NEXT")
-                pdf.set_text_color(30)
-                pdf.body(c.get("feedback", ""))
-                if c.get("quote"):
-                    pdf.meta(c.get("quote", ""))
+            if key == "negotiation":
+                criteria = report.get("criteria", [])
+                for i, c in enumerate(criteria):
+                    score = c.get("score", "adequate")
+                    r, g, b = _score_color.get(score, (80, 80, 80))
+                    pdf.ln(1)
+                    pdf.set_font("Helvetica", "B", 10.5)
+                    pdf.set_text_color(20)
+                    pdf.set_x(pdf.l_margin)
+                    pdf.cell(0, 6, _clean(f"{i+1}. {c.get('short_name', '')}"), new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_font("Helvetica", "B", 9)
+                    pdf.set_text_color(r, g, b)
+                    pdf.set_x(pdf.l_margin)
+                    pdf.cell(0, 5, _clean(f"[{_score_label.get(score, score.upper())}]"), new_x="LMARGIN", new_y="NEXT")
+                    pdf.set_text_color(30)
+                    pdf.body(c.get("feedback", ""))
+                    if c.get("quote"):
+                        pdf.meta(c.get("quote", ""))
 
     # Transcript with the AI's private notes.
     pdf.add_page()
