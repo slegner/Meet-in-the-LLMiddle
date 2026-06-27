@@ -45,5 +45,10 @@ class ProfileModel(BaseModel):
     timer_response_secs: int = 120
 
 
+class GenerateCaseRequest(BaseModel):
+    query: str          # e.g. "commercial lease flood damage UK"
+    save: bool = True   # write to data/cases/{id}.json immediately
+
+
 # Cases, case files, reports and history are assembled as plain dicts.
 JSON = dict[str, Any]

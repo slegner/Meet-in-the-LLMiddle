@@ -19,9 +19,6 @@ DATA_DIR = Path(__file__).parent / "data"
 SESSIONS_DIR = DATA_DIR / "sessions"
 CASES_DIR = DATA_DIR / "cases"
 
-SIDES = ("tenant", "landlord")
-
-
 # ---------------------------------------------------------------------------
 # Cases
 # ---------------------------------------------------------------------------
@@ -43,8 +40,21 @@ def load_case(case_id: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def opposite_side(side: str) -> str:
-    return "landlord" if side == "tenant" else "tenant"
+def save_case(case: dict[str, Any], overwrite: bool = False) -> None:
+    CASES_DIR.mkdir(parents=True, exist_ok=True)
+    path = CASES_DIR / f"{case['id']}.json"
+    if path.exists() and not overwrite:
+        raise FileExistsError(
+            f"Case '{case['id']}' already exists. Pass overwrite=True to replace it."
+        )
+    path.write_text(json.dumps(case, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def opposite_side(case: dict[str, Any], side: str) -> str:
+    others = [s for s in case["sides"] if s != side]
+    if not others:
+        raise ValueError(f"No opposing side found for '{side}' in case '{case['id']}'")
+    return others[0]
 
 
 def player_packet(case: dict[str, Any], side: str) -> dict[str, Any]:
@@ -65,7 +75,7 @@ def player_packet(case: dict[str, Any], side: str) -> dict[str, Any]:
 
 def ai_packet(case: dict[str, Any], player_side: str) -> dict[str, Any]:
     """The opponent's private packet (the side the player did NOT pick)."""
-    side = opposite_side(player_side)
+    side = opposite_side(case, player_side)
     s = case["sides"][side]
     return {
         "title": case["title"],
@@ -93,9 +103,11 @@ def new_session_id() -> str:
 
 
 def create_session(case_id: str, side: str, personality: str = "default") -> dict[str, Any]:
-    if side not in SIDES:
-        raise ValueError(f"Invalid side: {side}")
-    case = load_case(case_id)  # validates the case exists
+    case = load_case(case_id)
+    if side not in case["sides"]:
+        raise ValueError(
+            f"Invalid side '{side}'. Available sides: {list(case['sides'].keys())}"
+        )
     session = {
         "id": new_session_id(),
         "case_id": case_id,

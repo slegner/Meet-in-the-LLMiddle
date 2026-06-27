@@ -3,7 +3,7 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
-export type Side = "tenant" | "landlord";
+export type Side = string;
 
 export interface CaseSummary {
   id: string;
@@ -119,6 +119,8 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
 
 export const listCases = () => getJSON<CaseSummary[]>("/cases");
 export const getCase = (id: string) => getJSON<CaseDetail>(`/cases/${id}`);
+export const generateCase = (query: string, save = true) =>
+  send<CaseDetail>("POST", "/cases/generate", { query, save });
 export interface Personality {
   id: string;
   label: string;

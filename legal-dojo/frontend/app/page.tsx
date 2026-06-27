@@ -6,6 +6,7 @@ import {
   listCases,
   listPersonalities,
   getCase,
+  generateCase,
   startSession,
   getSession,
   type CaseSummary,
@@ -24,6 +25,8 @@ export default function StartPage() {
   const [personality, setPersonality] = useState("default");
   const [personalityList, setPersonalityList] = useState<Personality[]>([]);
   const [starting, setStarting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genQuery, setGenQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<{ sid: string; turns: number; side: Side } | null>(null);
 
@@ -61,10 +64,27 @@ export default function StartPage() {
     }
   }
 
+  async function generate() {
+    if (!genQuery.trim()) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const newCase = await generateCase(genQuery.trim());
+      setCases((cs) => [...cs, { id: newCase.id, title: newCase.title, summary: newCase.summary }]);
+      setDetail(newCase);
+      setSide(null);
+      setGenQuery("");
+    } catch (e) {
+      setError(`Case generation failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   if (error) return <div className="container narrow"><p className="muted">{error}</p></div>;
   if (!detail) return <div className="container narrow"><p className="muted">Loading cases…</p></div>;
 
-  const sides: Side[] = ["tenant", "landlord"];
+  const sides = Object.keys(detail.sides) as Side[];
 
   return (
     <div className="container" style={{ maxWidth: 1280 }}>
@@ -86,6 +106,54 @@ export default function StartPage() {
 
       <h1>New Simulation</h1>
       <p className="subtitle">Read the case file, choose your side, and negotiate against the AI.</p>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, alignItems: "stretch" }}>
+        <select
+          style={{
+            flex: "0 0 auto",
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--panel)",
+            color: "var(--fg)",
+            fontSize: 14,
+          }}
+          value={detail.id}
+          onChange={(e) => {
+            const found = cases.find((c) => c.id === e.target.value);
+            if (found) { getCase(found.id).then(setDetail); setSide(null); }
+          }}
+        >
+          {cases.map((c) => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder='Generate new case… e.g. "employment tribunal unfair dismissal UK"'
+          value={genQuery}
+          onChange={(e) => setGenQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && generate()}
+          disabled={generating}
+          style={{
+            flex: 1,
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            background: "var(--panel)",
+            color: "var(--fg)",
+            fontSize: 14,
+          }}
+        />
+        <button
+          className="btn"
+          onClick={generate}
+          disabled={generating || !genQuery.trim()}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {generating ? "Generating…" : "Generate"}
+        </button>
+      </div>
 
       <section className="paper">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

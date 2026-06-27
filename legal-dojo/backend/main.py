@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import agents
+import case_pipeline
 import evaluators
 import personalities
 import player_memory
@@ -17,6 +18,7 @@ from models import (
     ChatRequest,
     ChatResponse,
     EndRequest,
+    GenerateCaseRequest,
     ProfileModel,
     StartRequest,
     StartResponse,
@@ -45,6 +47,20 @@ def health() -> dict[str, str]:
 @app.get("/cases")
 def list_cases():
     return store.list_cases()
+
+
+@app.post("/cases/generate")
+def generate_case(req: GenerateCaseRequest):
+    try:
+        case = case_pipeline.generate_case(req.query)
+    except Exception as e:
+        raise HTTPException(500, f"Case generation failed: {e}")
+    if req.save:
+        try:
+            store.save_case(case)
+        except FileExistsError:
+            store.save_case(case, overwrite=True)
+    return case
 
 
 @app.get("/cases/{case_id}")
