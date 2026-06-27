@@ -86,6 +86,7 @@ export default function ProfilePage() {
 
   const fresh = profile.observations.filter((o) => o.sessions_since_last_seen === 0);
   const fading = profile.observations.filter((o) => o.sessions_since_last_seen > 0);
+  const [fadingOpen, setFadingOpen] = useState(false);
 
   return (
     <div className="container" style={{ maxWidth: 1280 }}>
@@ -128,11 +129,10 @@ export default function ProfilePage() {
 
         {/* Right column: weak spots */}
         <div className="card" style={{ borderColor: "rgba(239,111,111,0.35)" }}>
-          <h3 style={{ color: "var(--danger)", marginBottom: 4 }}>Identified weak spots</h3>
+          <h3 style={{ color: "var(--danger)", marginBottom: 4 }}>Weak spots from last session</h3>
           <p className="muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 16 }}>
-            Auto-collected from your coaching reports. Spots that stop appearing in your sessions
-            are removed automatically after {EVICT_AFTER} sessions — or dismiss one yourself if
-            you disagree.
+            Auto-collected from your most recent coaching report. Dismiss any you disagree with —
+            spots that stop appearing are removed automatically after {EVICT_AFTER} sessions.
           </p>
 
           {profile.observations.length === 0 && (
@@ -141,87 +141,62 @@ export default function ProfilePage() {
             </p>
           )}
 
-          {/* Active weak spots (seen in most recent session) */}
-          {fresh.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
-                Still present
-              </div>
-              {fresh.map((obs, i) => {
-                const realIdx = profile.observations.indexOf(obs);
-                return (
-                  <div key={realIdx} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    background: "rgba(239,111,111,0.10)",
-                    border: "1px solid rgba(239,111,111,0.28)",
-                    borderLeft: "3px solid var(--danger)",
-                    borderRadius: 8,
-                    padding: "9px 12px",
-                    marginBottom: 8,
-                  }}>
-                    <span style={{ flex: 1, fontSize: 14 }}>{obs.text}</span>
-                    <button
-                      onClick={() => removeObs(realIdx)}
-                      title="Dismiss this observation"
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--muted)",
-                        fontSize: 16,
-                        cursor: "pointer",
-                        padding: "0 2px",
-                        lineHeight: 1,
-                        flexShrink: 0,
-                      }}
-                    >×</button>
-                  </div>
-                );
-              })}
-            </div>
+          {fresh.length === 0 && profile.observations.length > 0 && (
+            <p className="muted" style={{ fontStyle: "italic", fontSize: 13 }}>
+              No new weak spots from your last session — looking good!
+            </p>
           )}
 
-          {/* Fading observations (not seen recently) */}
-          {fading.length > 0 && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", marginBottom: 8 }}>
-                Improving — not seen recently
+          {fresh.map((obs) => {
+            const realIdx = profile.observations.indexOf(obs);
+            return (
+              <div key={realIdx} style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: "rgba(239,111,111,0.10)",
+                border: "1px solid rgba(239,111,111,0.28)",
+                borderLeft: "3px solid var(--danger)",
+                borderRadius: 8,
+                padding: "9px 12px",
+                marginBottom: 8,
+              }}>
+                <span style={{ flex: 1, fontSize: 14 }}>{obs.text}</span>
+                <button onClick={() => removeObs(realIdx)} title="Dismiss"
+                  style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
               </div>
-              {fading.map((obs) => {
-                const realIdx = profile.observations.indexOf(obs);
-                return (
-                  <div key={realIdx} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    background: "var(--panel)",
-                    border: "1px solid var(--border)",
-                    borderLeft: "3px solid var(--muted)",
-                    borderRadius: 8,
-                    padding: "9px 12px",
-                    marginBottom: 8,
-                    opacity: 0.7,
-                  }}>
-                    <span style={{ flex: 1, fontSize: 14 }}>{obs.text}</span>
-                    <StaleBadge obs={obs} />
-                    <button
-                      onClick={() => removeObs(realIdx)}
-                      title="Dismiss this observation"
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--muted)",
-                        fontSize: 16,
-                        cursor: "pointer",
-                        padding: "0 2px",
-                        lineHeight: 1,
-                        flexShrink: 0,
-                      }}
-                    >×</button>
-                  </div>
-                );
-              })}
+            );
+          })}
+
+          {/* Improving section — collapsed by default */}
+          {fading.length > 0 && (
+            <div style={{ marginTop: fresh.length > 0 ? 12 : 0 }}>
+              <button
+                onClick={() => setFadingOpen((v) => !v)}
+                style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 12, cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {fadingOpen ? "▲" : "▶"} {fading.length} improving — not seen recently
+              </button>
+              {fadingOpen && (
+                <div style={{ marginTop: 8 }}>
+                  {fading.map((obs) => {
+                    const realIdx = profile.observations.indexOf(obs);
+                    return (
+                      <div key={realIdx} style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        background: "var(--panel)", border: "1px solid var(--border)",
+                        borderLeft: "3px solid var(--muted)", borderRadius: 8,
+                        padding: "9px 12px", marginBottom: 8, opacity: 0.7,
+                      }}>
+                        <span style={{ flex: 1, fontSize: 14 }}>{obs.text}</span>
+                        <StaleBadge obs={obs} />
+                        <button onClick={() => removeObs(realIdx)} title="Dismiss"
+                          style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}>×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 """Pydantic request/response models for the Legal Dojo API."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, List
 
 from pydantic import BaseModel
 
@@ -38,7 +38,7 @@ class TtsRequest(BaseModel):
 class ProfileModel(BaseModel):
     display_name: str = "Trainee"
     notes: str = ""
-    observations: list[str] = []
+    observations: List[Any] = []  # list of {text, sessions_since_last_seen, added_at}
 
 
 # Cases, case files, reports and history are assembled as plain dicts.
