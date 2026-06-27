@@ -87,9 +87,17 @@ function Scene() {
     return () => clearInterval(id);
   }, [sending]);
 
+  function stopSpeaking() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }
+
   async function send() {
     const text = input.trim();
     if (!text || sending || ended) return;
+    stopSpeaking(); // cut off the opponent if they're still talking
     setError(null);
     setInput("");
     setMessages((m) => [...m, { role: "player", text }]);
