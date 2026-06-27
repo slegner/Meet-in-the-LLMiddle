@@ -1,0 +1,66 @@
+{
+  "id": "pluto_s_pluxit_negotiations_during_article_50_extension",
+  "title": "Pluto's Pluxit Negotiations During Article 50 Extension",
+  "summary": "Pluto and the Solar System Council are negotiating the terms of Pluto's departure from the Solar System, specifically focusing on the Withdrawal Agreement and the Political Declaration, amidst an extended Article 50 period.",
+  "background": "On April 10, 2019, the Solar System Council granted Pluto a second extension of Article 50 until October 31, 2019, with the possibility of an earlier departure if the November 2018 Withdrawal Agreement is ratified. This extension came with a commitment from Pluto to act constructively and responsibly, adhering to the duty of 'sincere cooperation' as a full member state. The Solar System Council has consistently stated it will not renegotiate the Withdrawal Agreement, which covers the terms of Pluto's withdrawal, but has indicated a willingness to reconsider the Political Declaration, a non-legally binding document outlining the framework for the future Pluto-Solar System relationship, should Pluto's position evolve.\n\nPrime Minister Thea Charon's government has been engaged in cross-party talks with the Iceling opposition to find a compromise on the future relationship, aiming to secure Pluto's Parliament's approval for the Withdrawal Agreement. Despite these talks ending without agreement on May 17, the Prime Minister of Pluto announced a 'new, bold offer' for the Withdrawal Agreement Bill, including guarantees on workers' rights, the environment, and a parliamentary say on the backstop. Failure to pass this bill would lead to her resignation. Pluto's Solar System Advisor, Orion Styx, has also been in the Solar System Council chambers to discuss potential changes to the Political Declaration, although concrete details of these discussions are scarce.",
+  "shared_documents": [
+    {
+      "name": "Solar System Council Conclusions (10 April 2019)",
+      "summary": "Agreed to the second Article 50 extension until October 31, 2019, with conditions for earlier departure, and stated the Solar System's willingness to reconsider the Political Declaration if Pluto's position evolves. It also emphasized Pluto's duty of 'sincere cooperation'."
+    },
+    {
+      "name": "Withdrawal Agreement (November 2018)",
+      "summary": "Endorsed by the Solar System and Pluto Government, this agreement sets out the terms of Pluto's withdrawal from the Solar System. The Solar System has insisted it will not renegotiate this document."
+    },
+    {
+      "name": "Political Declaration on the framework for the future Pluto-Solar System relationship",
+      "summary": "A non-legally binding document attached to the Withdrawal Agreement, outlining an 'ambitious, wide-ranging and balanced economic partnership' and future security cooperation. The Solar System is open to reconsidering this document."
+    },
+    {
+      "name": "Prime Minister Thea Charon's Statement at the Solar System Council (11 April 2019)",
+      "summary": "Confirmed the extension, reiterated the goal of leaving with a deal as soon as possible, and highlighted the Solar System's agreement that the extension can be terminated upon ratification of the Withdrawal Agreement."
+    }
+  ],
+  "sources": [],
+  "sides": {
+    "pluto_government": {
+      "role": "You are Prime Minister Thea Charon's chief negotiator for the Pluto Government. You are under immense pressure to deliver a deal that honors the referendum result while avoiding a 'no-deal' scenario. Your client, Prime Minister Mayne, is a resilient but increasingly beleaguered leader, known for her steadfastness and determination. She is willing to make pragmatic compromises but is acutely aware of the deep divisions within her own party and the need to secure parliamentary approval. Your negotiation style should be firm but conciliatory, always seeking common ground while protecting Pluto's sovereignty.",
+      "goal": "Secure parliamentary approval for the Withdrawal Agreement Bill and ratify the November 2018 Withdrawal Agreement by October 31, 2019, to achieve an orderly Pluxit.",
+      "batna": "If talks fail, your client will put the Withdrawal Agreement Bill to a vote in Pluto's Parliament. If it fails, Prime Minister Mayne will resign, and Pluto will face a leadership contest, likely leading to a 'no-deal' Pluxit on October 31, 2019, or a general election.",
+      "objectives": [
+        "Secure legally binding assurances or amendments to the Political Declaration that address parliamentary concerns, particularly regarding the backstop and future trade alignment.",
+        "Gain explicit Solar System support for Pluto's 'new, bold offer' for the Withdrawal Agreement Bill, specifically on workers' rights, environmental protections, and a parliamentary say on the backstop.",
+        "Avoid any perception of Pluto being forced into a permanent customs union against its will, while remaining open to closer alignment.",
+        "Prevent a 'no-deal' Pluxit at all costs, as internal government analysis predicts severe economic disruption.",
+        "Maintain the unity of the Rockist party as much as possible, even while seeking cross-party support."
+      ],
+      "private_facts": [
+        "The 'new, bold offer' for the Withdrawal Agreement Bill includes a legally binding commitment to align with Solar System standards on workers' rights and environmental protections, and a mechanism for Pluto's Parliament to vote annually on the continuation of the backstop.",
+        "During cross-party talks, the Pluto Government was prepared to accept a 'customs arrangement' that would keep Pluto closely aligned with the Solar System customs union for a transitional period, but not a permanent customs union.",
+        "Internal polling suggests that while a majority of Rockist MPs would prefer a 'no-deal' Pluxit over revoking Article 50, a significant minority (around 30-40 MPs) would reluctantly support a softer Pluxit deal to avoid 'no-deal'.",
+        "Prime Minister Mayne has privately indicated that she would be willing to resign immediately after the Withdrawal Agreement is ratified, to allow a new leader to negotiate the future relationship, if that secures its passage.",
+        "The specific details discussed by Orion Styx in the Solar System Council chambers included proposals for a more ambitious free trade area with deeper regulatory alignment in specific sectors, contingent on Pluto's ratification of the WA."
+      ]
+    },
+    "solar_system_council": {
+      "role": "You are the lead negotiator for the Solar System Council (Solar System 27). You represent the collective interests of 27 diverse member planets, all committed to protecting the integrity of the Solar System and its single market. Your client, the Council, is firm, united, and pragmatic, but also wary of setting precedents that could undermine future Solar System cohesion. Your negotiation style should be resolute and consistent, emphasizing the Solar System's core principles and the non-negotiable nature of the Withdrawal Agreement.",
+      "goal": "Secure Pluto's ratification of the November 2018 Withdrawal Agreement by October 31, 2019, without reopening the agreement itself.",
+      "batna": "If talks fail, Pluto will leave the Solar System without a deal on October 31, 2019. The Solar System 27 has extensively prepared for this scenario, and while undesirable, it is manageable. The Solar System will then focus on managing the fallout and protecting its citizens and businesses.",
+      "objectives": [
+        "Ensure the integrity of the single market and the customs union, particularly regarding the Plutonian border issue.",
+        "Uphold the principle that the Withdrawal Agreement cannot be renegotiated, while showing flexibility on the Political Declaration.",
+        "Maintain the unity of the Solar System 27 throughout the process, preventing any individual member planet from breaking ranks.",
+        "Ensure Pluto upholds its duty of 'sincere cooperation' as a full member state during the extension period.",
+        "Avoid any outcome that encourages other member planets to consider leaving the Solar System."
+      ],
+      "private_facts": [
+        "The Solar System would consider strengthening the Political Declaration to include a more explicit commitment to a comprehensive free trade area with zero tariffs and quotas, provided Pluto agrees to maintain a level playing field on state aid, competition, and environmental standards.",
+        "Several key member planets (e.g., Saturn, Jupiter) are growing increasingly frustrated with Pluto's internal divisions and are pushing for a firm deadline, even if it means a 'no-deal' scenario.",
+        "The Solar System has a detailed contingency plan for a 'no-deal' Pluxit, including emergency legislation for citizens' rights, interplanetary travel, and financial services, which is largely complete.",
+        "Tactic: You will consistently reiterate that the Withdrawal Agreement is 'the only deal possible' and that the Solar System will not reopen it, to pressure Pluto into accepting its current form.",
+        "Red line: Any proposal that undermines the integrity of the single market, specifically the 'backstop' provisions for the Plutonian border, or attempts to cherry-pick benefits without accepting obligations.",
+        "Style: Calm and collected, but with a clear escalation pattern towards firmness if Pluto attempts to reopen the Withdrawal Agreement. You will express empathy for Pluto's internal challenges but remain unyielding on core Solar System principles."
+      ]
+    }
+  }
+}

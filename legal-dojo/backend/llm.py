@@ -32,12 +32,16 @@ PROVIDER = os.environ.get("LLM_PROVIDER", "gemini").lower()
 # roles back to "gemini-2.5-pro" once a paid tier / Gemini swap is in place.
 _PRO = os.environ.get("LLM_PRO_MODEL", "gemini-2.5-flash")
 _FLASH = os.environ.get("LLM_FLASH_MODEL", "gemini-2.5-flash")
+# Long-context model for case parsing (1M+ token window). Override with
+# LLM_CASE_PARSER_MODEL=gemini-1.5-pro for the full 2M-token window.
+_CASE_PARSER = os.environ.get("LLM_CASE_PARSER_MODEL", "gemini-2.5-flash")
 _GEMINI_MODELS: dict[str, str] = {
     "director": _FLASH,
     "adversary": _FLASH,
     "notetaker": _FLASH,
     "predictor": _PRO,
     "evaluator": _PRO,
+    "case_parser": _CASE_PARSER,
     "default": _FLASH,
 }
 

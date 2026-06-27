@@ -20,6 +20,7 @@ class StartResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    interrupt_count: int = 0    # total times player has cut off the AI this session (0 = no interrupt)
 
 
 class ChatResponse(BaseModel):
@@ -48,6 +49,17 @@ class ProfileModel(BaseModel):
 class GenerateCaseRequest(BaseModel):
     query: str          # e.g. "commercial lease flood damage UK"
     save: bool = True   # write to data/cases/{id}.json immediately
+
+
+class GenerateParodyCaseRequest(BaseModel):
+    text: str                          # full source document text
+    substitutions: dict[str, str] = {} # e.g. {"UK": "Pluto", "EU": "The Solar System"}
+    save: bool = True
+
+
+class GenerateFromTextRequest(BaseModel):
+    text: str       # full case text (e.g. extracted from a PDF)
+    save: bool = True
 
 
 # Cases, case files, reports and history are assembled as plain dicts.

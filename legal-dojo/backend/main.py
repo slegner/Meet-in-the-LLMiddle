@@ -21,6 +21,8 @@ from models import (
     ChatResponse,
     EndRequest,
     GenerateCaseRequest,
+    GenerateFromTextRequest,
+    GenerateParodyCaseRequest,
     ProfileModel,
     StartRequest,
     StartResponse,
@@ -57,6 +59,34 @@ def generate_case(req: GenerateCaseRequest):
         case = case_pipeline.generate_case(req.query)
     except Exception as e:
         raise HTTPException(500, f"Case generation failed: {e}")
+    if req.save:
+        try:
+            store.save_case(case)
+        except FileExistsError:
+            store.save_case(case, overwrite=True)
+    return case
+
+
+@app.post("/cases/generate-from-text")
+def generate_case_from_text(req: GenerateFromTextRequest):
+    try:
+        case = case_pipeline.generate_case_from_text(req.text)
+    except Exception as e:
+        raise HTTPException(500, f"Case generation failed: {e}")
+    if req.save:
+        try:
+            store.save_case(case)
+        except FileExistsError:
+            store.save_case(case, overwrite=True)
+    return case
+
+
+@app.post("/cases/generate-parody")
+def generate_parody_case(req: GenerateParodyCaseRequest):
+    try:
+        case = case_pipeline.generate_parody_case(req.text, req.substitutions)
+    except Exception as e:
+        raise HTTPException(500, f"Parody case generation failed: {e}")
     if req.save:
         try:
             store.save_case(case)
@@ -172,7 +202,26 @@ def chat(sid: str, req: ChatRequest):
         raise HTTPException(404, "Session not found")
     if session.get("status") == "ended":
         raise HTTPException(409, "This negotiation has already ended.")
-    turn = agents.run_turn(case, session, req.message)
+    student_msg = req.message
+    if req.interrupt_count > 0:
+        if req.interrupt_count % 3 == 0:
+            # Every third interruption: explicitly call it out
+            student_msg = (
+                "[NOTE: The student has now cut you off mid-speech for the "
+                f"{req.interrupt_count}th time. Open your response by firmly telling them "
+                "to stop interrupting — e.g. 'I'd appreciate it if you'd let me finish' — "
+                "then continue your argument.] " + req.message
+            )
+        else:
+            # Otherwise: just let irritation colour the tone, don't mention it
+            student_msg = (
+                "[NOTE: The student just cut you off mid-speech. Let a slight edge of "
+                "irritation colour your tone — don't address it directly, just continue "
+                "with noticeably less patience.] " + req.message
+            )
+    turn = agents.run_turn(case, session, student_msg)
+    if req.interrupt_count > 0:
+        turn["student"] = req.message
     store.save_session(session)
     return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"],
                         phase=turn["phase"], emotion=_emotion_from_turn(turn))
@@ -227,7 +276,14 @@ def get_report(sid: str):
         raise HTTPException(404, "Session not found")
     if not session.get("report"):
         raise HTTPException(409, "No report yet — end the negotiation first.")
-    return session["report"]
+    report = session["report"]
+    # Backfill full criterion titles for reports saved before the title field was added
+    criteria = report.get("criteria") or []
+    titles = [c["title"] for c in evaluators._CRITERIA]
+    for i, item in enumerate(criteria):
+        if i < len(titles):
+            item["short_name"] = titles[i]
+    return report
 
 
 @app.get("/sessions/{sid}/report.pdf")
@@ -282,10 +338,27 @@ def put_player_memory(profile: ProfileModel):
 
 
 # ---------------------------------------------------------------------------
-# Speech-to-text (faster-whisper, lazy-loaded — no LLVM dependency)
+# Speech-to-text
+# Primary: OpenAI Whisper API (whisper-1) — cloud, high accuracy, legal prompt
+# Fallback: faster-whisper local (small/int8) — no API key needed
 # ---------------------------------------------------------------------------
 
-_whisper_model = None
+# Short bias hint — do NOT make this a sentence Whisper can hallucinate-complete.
+_LEGAL_PROMPT = "BATNA, without prejudice, indemnity, liability, injunction."
+
+_openai_client = None
+_whisper_model  = None
+
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        import openai as _openai_lib
+        key = os.environ.get("OPENAI_API_KEY", "")
+        if not key:
+            raise RuntimeError("OPENAI_API_KEY not set")
+        _openai_client = _openai_lib.OpenAI(api_key=key)
+    return _openai_client
 
 
 def _get_whisper():
@@ -299,14 +372,26 @@ def _get_whisper():
 @app.post("/transcribe")
 async def transcribe(audio: UploadFile = File(...)):
     data = await audio.read()
-    filename = audio.filename or "recording.webm"
-    ext = os.path.splitext(filename)[1] or ".webm"
+    ext = os.path.splitext(audio.filename or "recording.webm")[1] or ".webm"
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
         f.write(data)
         tmp_path = f.name
     try:
+        # Primary: OpenAI Whisper API
+        try:
+            client = _get_openai_client()
+            with open(tmp_path, "rb") as audio_f:
+                result = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_f,
+                    language="en",
+                    prompt=_LEGAL_PROMPT,
+                )
+            return {"text": result.text.strip()}
+        except Exception:
+            pass
+        # Fallback: local faster-whisper
         segments, _ = _get_whisper().transcribe(tmp_path, language="en", beam_size=5)
-        text = " ".join(seg.text.strip() for seg in segments)
-        return {"text": text.strip()}
+        return {"text": " ".join(s.text.strip() for s in segments).strip()}
     finally:
         os.unlink(tmp_path)
