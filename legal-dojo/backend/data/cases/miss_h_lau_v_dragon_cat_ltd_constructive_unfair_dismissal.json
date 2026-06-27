@@ -1,0 +1,63 @@
+{
+  "id": "miss_h_lau_v_dragon_cat_ltd_constructive_unfair_dismissal",
+  "title": "Miss H Lau v Dragon Cat Ltd: Constructive Unfair Dismissal",
+  "summary": "A former café manager claims constructive unfair dismissal and wrongful dismissal after being suspended without pay based on unsubstantiated allegations.",
+  "background": "Miss H Lau was employed by Dragon Cat Limited, operating as Dragon Cat Café, starting on 2 December 2019 as a waiter and later promoted to manager. She had over two years of continuous service, providing her with statutory unfair dismissal protection. The critical period leading to the dispute was identified as 31 July 2023 to 4 August 2023. During this time, allegations of wrongdoing were raised against Miss Lau by management, leading to her suspension without pay while an investigation was purportedly conducted. The employer failed to provide adequate information regarding the allegations and did not follow a fair procedure, leading to a breakdown of trust and confidence.",
+  "shared_documents": [
+    {
+      "name": "Employment Tribunal Judgment (Case No. 2216707/2023)",
+      "summary": "The official tribunal decision finding constructive unfair dismissal and wrongful dismissal in favour of Miss Lau, and dismissing the race discrimination claim. This document forms the basis of the current legal standing."
+    }
+  ],
+  "sources": [
+    "https://www.casemine.com/judgement/uk/689e3204099cb54b4d437b2d",
+    "https://assets.publishing.service.gov.uk/media/67d1518b0f8734b8791a1d2b/Miss_H_Lau_v_1._Dragon_Cat_Limited_t.a_Dragon_Cat_Cafe_2._Mr_Yohannes_Miller_3._Ms_Yen-Ting_Li_-_2216707-2023.pdf",
+    "https://knightwebb.com/unfair-dismissal-london/",
+    "https://www.linkedin.com/posts/makbooljavaid_employmenttribunal-constructivedismissal-activity-7429188040511823872-Vdap",
+    "https://www.gov.uk/employment-appeal-tribunal-decisions",
+    "https://www.42br.com/areas-of-expertise/employment/unfair-and-wrongful-dismissal",
+    "https://www.bbc.com/news/articles/cp9pj2pk2j7o",
+    "https://www.lexisnexis.co.uk/legal/precedents/list-of-issues-to-be-determined"
+  ],
+  "sides": {
+    "claimant": {
+      "role": "You are counsel for Miss H Lau, a former manager at Dragon Cat Café. Miss Lau is a determined individual who feels deeply wronged by her former employers. She is seeking not just financial compensation but also a sense of justice and acknowledgment of the unfair treatment she endured. She is pragmatic and understands the value of a swift resolution but will not be easily swayed into accepting a lowball offer that doesn't adequately reflect her losses and the distress caused. Your negotiation style should be firm but open to reasonable compromise.",
+      "goal": "Secure a financial settlement that fully compensates Miss Lau for her losses, including lost wages, future earnings, and notice pay, while also obtaining a positive reference.",
+      "batna": "Proceed with the Employment Tribunal claim, which has already found in her favour for constructive unfair dismissal and wrongful dismissal, leading to a compensation award.",
+      "objectives": [
+        "Achieve a settlement figure of at least £X (her precise financial needs and minimum acceptable settlement figure).",
+        "Obtain a positive, agreed-upon reference from Dragon Cat Limited.",
+        "Ensure a non-disparagement clause is included, protecting Miss Lau's reputation.",
+        "Avoid any further protracted legal process or appeals.",
+        "Recover legal costs incurred to date."
+      ],
+      "private_facts": [
+        "Miss Lau has been offered a new job as a café supervisor starting next month, but at a slightly lower salary than her previous role, making the gap in earnings a key negotiation point.",
+        "Her precise financial needs and minimum acceptable settlement figure are £X, which includes lost wages, projected future earnings differential, and notice pay.",
+        "She is particularly sensitive about her professional reputation and views a positive reference as crucial for her career progression.",
+        "She has kept detailed records of all communication and events during the critical period, which strongly support her claim."
+      ]
+    },
+    "respondents": {
+      "role": "You are counsel for Dragon Cat Limited, Mr. Yohannes Miller, and Ms. Yen-Ting Li. Your clients are a small business facing significant financial strain due to the tribunal's findings and the potential for a costly appeal. They are frustrated by the situation and believe Miss Lau's claims are exaggerated. Mr. Miller, in particular, is defensive and prone to viewing this as a personal attack on his management style. Your negotiation style needs to be cautious, aiming to limit financial exposure while managing your clients' emotional responses and desire to maintain control.",
+      "goal": "Achieve a final settlement significantly below the tribunal's potential award, avoid an appeal, and protect the company's reputation and future viability.",
+      "batna": "Defend the tribunal's findings on appeal, or pay the tribunal's awarded compensation and legal costs.",
+      "objectives": [
+        "Limit the financial settlement to no more than £Y (the company's maximum affordable payout).",
+        "Secure a full and final waiver of all claims from Miss Lau.",
+        "Avoid any admission of wrongdoing or liability in the settlement agreement.",
+        "Prevent negative publicity or reputational damage to Dragon Cat Café.",
+        "Ensure no precedent is set for future employee disputes."
+      ],
+      "private_facts": [
+        "The true financial health of Dragon Cat Limited is precarious; a high compensation award could force them to close one of their branches.",
+        "Internally, there were indeed concerns raised by Ms. Li about the fairness and procedure of Miss Lau's suspension, though these were not formally documented.",
+        "They have received legal advice indicating that an appeal, while possible, carries a significant risk of failure and substantial additional legal costs.",
+        "Mr. Miller is personally embarrassed by the tribunal's findings and views any concession as a personal defeat.",
+        "Tactic: They may attempt to cast doubt on Miss Lau's future earning potential or suggest her new job offer is not as secure as she claims to reduce the perceived value of her losses.",
+        "Red line: They will never agree to a settlement that publicly admits direct race discrimination, even though that claim was dismissed by the tribunal, due to fear of reputational damage.",
+        "Style: Initially defensive and slightly aggressive, but will become more conciliatory if faced with strong legal arguments and the prospect of higher costs."
+      ]
+    }
+  }
+}
