@@ -115,10 +115,25 @@ def get_casefile(sid: str):
     return store.player_packet(case, session["side"])
 
 
-def _emotion_from_phase(phase: str) -> str:
-    if phase in ("aggressive", "firm"):
+_ANNOYED_SIGNALS = {
+    "threatening", "threat", "aggressive", "hostile", "disrespectful",
+    "bad faith", "bad-faith", "unreasonable", "intimidat", "bully",
+    "coercive", "manipulat", "bluffing", "ultimatum", "insult", "rude",
+    "abusive", "condescending", "dismissive", "arrogant",
+}
+
+
+def _emotion_from_turn(turn: dict) -> str:
+    """Derive emotion from what the AI actually perceived this turn.
+
+    'annoyed' fires when the AI's private note records threatening, hostile,
+    or bad-faith behaviour from the player — not just because the AI is in an
+    aggressive phase. 'deal' fires when the AI is conceding/compromising.
+    """
+    note = str(turn.get("note", "")).lower()
+    if any(signal in note for signal in _ANNOYED_SIGNALS):
         return "annoyed"
-    if phase in ("concede", "compromise"):
+    if turn.get("phase") in ("concede", "compromise"):
         return "deal"
     return "neutral"
 
@@ -134,9 +149,8 @@ def chat(sid: str, req: ChatRequest):
         raise HTTPException(409, "This negotiation has already ended.")
     turn = agents.run_turn(case, session, req.message)
     store.save_session(session)
-    phase = turn["phase"]
-    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase,
-                        emotion=_emotion_from_phase(phase))
+    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"],
+                        phase=turn["phase"], emotion=_emotion_from_turn(turn))
 
 
 @app.post("/sessions/{sid}/nudge", response_model=ChatResponse)
@@ -158,8 +172,8 @@ def nudge_session(sid: str):
     turn["student"] = ""  # don't surface the internal prompt in the transcript
     store.save_session(session)
     phase = turn["phase"]
-    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase,
-                        emotion=_emotion_from_phase(phase))
+    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"],
+                        phase=turn["phase"], emotion=_emotion_from_turn(turn))
 
 
 @app.post("/sessions/{sid}/end")

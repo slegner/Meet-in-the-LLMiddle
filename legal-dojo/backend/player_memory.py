@@ -21,6 +21,8 @@ _DEFAULT: dict[str, Any] = {
     "display_name": "Trainee",
     "notes": "Editable notes about your negotiation style and goals. Add anything you want the trainer to remember.",
     "observations": [],
+    "timer_idle_secs": 120,
+    "timer_response_secs": 300,
     "updated_at": None,
 }
 
@@ -58,10 +60,18 @@ def load_profile() -> dict[str, Any]:
 
 def save_profile(profile: dict[str, Any]) -> dict[str, Any]:
     obs = _coerce_obs(profile.get("observations", []))[-MAX_OBSERVATIONS:]
+    def _clamp_secs(val: Any, default: int) -> int:
+        try:
+            return max(30, min(1800, int(val)))
+        except (TypeError, ValueError):
+            return default
+
     clean = {
         "display_name": str(profile.get("display_name", "Trainee"))[:80],
         "notes": str(profile.get("notes", "")),
         "observations": obs,
+        "timer_idle_secs": _clamp_secs(profile.get("timer_idle_secs"), 120),
+        "timer_response_secs": _clamp_secs(profile.get("timer_response_secs"), 300),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     PROFILE_FILE.parent.mkdir(parents=True, exist_ok=True)

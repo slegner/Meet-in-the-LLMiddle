@@ -40,6 +40,8 @@ class ProfileModel(BaseModel):
     display_name: str = "Trainee"
     notes: str = ""
     observations: List[Any] = []  # list of {text, sessions_since_last_seen, added_at}
+    timer_idle_secs: int = 120
+    timer_response_secs: int = 300
 
 
 # Cases, case files, reports and history are assembled as plain dicts.

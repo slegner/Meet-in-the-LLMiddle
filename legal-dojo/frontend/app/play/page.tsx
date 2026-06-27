@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { postChat, endSession, nudgeSession, getSession, getCaseFile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
+import { postChat, endSession, nudgeSession, getSession, getCaseFile, getProfile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
 import HistoryOverlay from "../components/HistoryOverlay";
@@ -87,8 +87,9 @@ function Scene() {
   const [emotion, setEmotion] = useState<"neutral" | "annoyed" | "deal">("neutral");
 
   // ── Timer ──────────────────────────────────────────────────────────────────
-  const IDLE_SECS = 120;     // 2 min idle (player hasn't started typing)
-  const RESPONSE_SECS = 300; // 5 min response (player started typing but hasn't sent)
+  // Defaults; overwritten from profile on mount
+  const idleSecsRef = useRef(120);
+  const responseSecsRef = useRef(300);
   const [timerOn, setTimerOn] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   // Refs so timer callbacks read current values without stale closures
@@ -116,7 +117,7 @@ function Scene() {
   function startIdleTimer() {
     if (!timerOnRef.current) return;
     isTypingRef.current = false;
-    setCountdown(IDLE_SECS);
+    setCountdown(idleSecsRef.current);
   }
 
   function onInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -124,7 +125,7 @@ function Scene() {
     // First keystroke switches from idle timer to (longer) response timer
     if (timerOnRef.current && !isTypingRef.current && e.target.value.trim()) {
       isTypingRef.current = true;
-      setCountdown(RESPONSE_SECS);
+      setCountdown(responseSecsRef.current);
     }
   }
 
@@ -184,6 +185,10 @@ function Scene() {
       .catch(() => {});
 
     getCaseFile(sid).then(setCaseFile).catch(() => {});
+    getProfile().then((p) => {
+      if (p.timer_idle_secs) idleSecsRef.current = p.timer_idle_secs;
+      if (p.timer_response_secs) responseSecsRef.current = p.timer_response_secs;
+    }).catch(() => {});
   }, [sid]);
 
   const THINKING = [
@@ -298,7 +303,7 @@ function Scene() {
             const next = !timerOn;
             setTimerOn(next);
             timerOnRef.current = next;
-            if (next) { isTypingRef.current = false; setCountdown(IDLE_SECS); }
+            if (next) { isTypingRef.current = false; setCountdown(idleSecsRef.current); }
             else setCountdown(null);
           }}
           title="2 min idle / 5 min response — AI presses on if you go silent"

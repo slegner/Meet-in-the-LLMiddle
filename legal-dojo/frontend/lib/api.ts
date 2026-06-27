@@ -96,6 +96,8 @@ export interface Profile {
   display_name: string;
   notes: string;
   observations: Observation[];
+  timer_idle_secs?: number;
+  timer_response_secs?: number;
   updated_at?: string | null;
 }
 

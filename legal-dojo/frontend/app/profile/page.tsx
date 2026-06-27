@@ -121,8 +121,45 @@ export default function ProfilePage() {
             />
           </div>
 
+          <div className="card">
+            <h3>Pressure timer</h3>
+            <p className="muted" style={{ fontSize: 13, marginTop: 0, marginBottom: 14 }}>
+              When the timer is on during a session, AI presses if you go silent.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <label style={{ fontSize: 13 }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>Idle timeout</div>
+                <div className="muted" style={{ fontSize: 11, marginBottom: 6 }}>No typing after AI speaks</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="number"
+                    min={10} max={600} step={5}
+                    value={profile.timer_idle_secs ?? 120}
+                    onChange={(e) => update("timer_idle_secs", Math.max(10, parseInt(e.target.value) || 120))}
+                    style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
+                  />
+                  <span className="muted">sec</span>
+                </div>
+              </label>
+              <label style={{ fontSize: 13 }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>Response timeout</div>
+                <div className="muted" style={{ fontSize: 11, marginBottom: 6 }}>Started typing but haven't sent</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="number"
+                    min={1} max={30} step={0.5}
+                    value={((profile.timer_response_secs ?? 300) / 60).toFixed(1).replace(/\.0$/, "")}
+                    onChange={(e) => update("timer_response_secs", Math.round(Math.max(1, parseFloat(e.target.value) || 5) * 60))}
+                    style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
+                  />
+                  <span className="muted">min</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <button className="btn" onClick={save}>Save profile</button>
+            <button className="btn" onClick={save}>Save</button>
             <span className="muted">{status}</span>
           </div>
         </div>
