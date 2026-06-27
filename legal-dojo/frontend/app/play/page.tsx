@@ -149,16 +149,23 @@ function Scene() {
   const [voiceOn, setVoiceOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const [voiceMode, setVoiceMode] = useState(false);
+  const voiceModeRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const silenceRafRef = useRef<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   function speak(text: string) {
     if (!voiceOn || !text) return;
     try {
       if (!audioRef.current) audioRef.current = new Audio();
       audioRef.current.src = ttsUrl(text);
+      audioRef.current.onended = () => {
+        if (voiceModeRef.current && !endedRef.current) startListening().catch(() => {});
+      };
       audioRef.current.play().catch(() => {});
     } catch { /* TTS is best-effort */ }
   }
@@ -217,38 +224,88 @@ function Scene() {
     }
   }
 
-  async function toggleMic() {
-    if (recording) {
-      mediaRecorderRef.current?.stop();
-      return;
-    }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  function stopSilenceDetection() {
+    if (silenceRafRef.current !== null) { cancelAnimationFrame(silenceRafRef.current); silenceRafRef.current = null; }
+    if (audioCtxRef.current) { audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+  }
+
+  async function startListening() {
+    if (sendingRef.current || endedRef.current) return;
+    let stream: MediaStream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch { return; }
+
     const mr = new MediaRecorder(stream);
     chunksRef.current = [];
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = async () => {
       stream.getTracks().forEach((t) => t.stop());
+      stopSilenceDetection();
       setRecording(false);
+      if (!voiceModeRef.current) return;
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       setTranscribing(true);
       try {
         const text = await transcribeAudio(blob);
-        if (text) setInput(text);
-      } catch {
-        // silently ignore transcription errors
-      } finally {
-        setTranscribing(false);
-      }
+        if (text) await sendMessage(text);
+      } catch {}
+      setTranscribing(false);
     };
+
+    try {
+      const audioCtx = new AudioContext();
+      audioCtxRef.current = audioCtx;
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      let speechDetected = false;
+      let silenceStart: number | null = null;
+      const startTime = Date.now();
+      function tick() {
+        if (!voiceModeRef.current) { mr.stop(); return; }
+        analyser.getByteTimeDomainData(data);
+        const rms = Math.sqrt(data.reduce((s, v) => s + (v - 128) ** 2, 0) / data.length);
+        if (rms > 8) { speechDetected = true; silenceStart = null; }
+        else if (speechDetected && Date.now() - startTime > 500) {
+          if (silenceStart === null) silenceStart = Date.now();
+          else if (Date.now() - silenceStart > 1500) { mr.stop(); return; }
+        }
+        silenceRafRef.current = requestAnimationFrame(tick);
+      }
+      silenceRafRef.current = requestAnimationFrame(tick);
+    } catch { /* Web Audio unavailable — recording runs until voice mode exits */ }
+
     mr.start();
     mediaRecorderRef.current = mr;
     setRecording(true);
   }
 
-  async function send() {
-    const text = input.trim();
+  async function enterVoiceMode() {
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.onended = null;
+      stopSpeaking();
+      setEmotion("annoyed");
+    }
+    setVoiceMode(true);
+    voiceModeRef.current = true;
+    await startListening().catch(() => { setVoiceMode(false); voiceModeRef.current = false; });
+  }
+
+  function exitVoiceMode() {
+    setVoiceMode(false);
+    voiceModeRef.current = false;
+    stopSilenceDetection();
+    if (audioRef.current) audioRef.current.onended = null;
+    mediaRecorderRef.current?.stop();
+    stopSpeaking();
+  }
+
+  async function sendMessage(text: string) {
     if (!text || sending || ended) return;
     stopSpeaking();
+    if (audioRef.current) audioRef.current.onended = null;
     setError(null);
     setInput("");
     setCountdown(null);           // pause timer while AI is replying
@@ -270,6 +327,12 @@ function Scene() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function send() {
+    const text = input.trim();
+    if (!text) return;
+    await sendMessage(text);
   }
 
   async function end(accepted = false) {
@@ -323,7 +386,10 @@ function Scene() {
         <button
           className="btn btn-secondary"
           onClick={() => setVoiceOn((v) => {
-            if (v && audioRef.current) audioRef.current.pause();
+            if (v) {
+              exitVoiceMode();
+              if (audioRef.current) audioRef.current.pause();
+            }
             return !v;
           })}
         >
@@ -425,13 +491,13 @@ function Scene() {
                       disabled={sending}
                     />
                     <button
-                      className="btn btn-secondary"
-                      onClick={toggleMic}
-                      disabled={sending || transcribing}
-                      title={recording ? "Stop recording" : "Speak your argument"}
-                      style={recording ? { background: "#c0392b", color: "#fff", borderColor: "#c0392b" } : undefined}
+                      className={`btn ${voiceMode ? "" : "btn-secondary"}`}
+                      onClick={voiceMode ? exitVoiceMode : enterVoiceMode}
+                      disabled={transcribing}
+                      title={voiceMode ? "Exit voice mode" : "Enter voice mode"}
+                      style={voiceMode ? { background: recording ? "#c0392b" : "#8b0000", color: "#fff", borderColor: recording ? "#c0392b" : "#8b0000" } : undefined}
                     >
-                      {transcribing ? "…" : recording ? "⏹ Stop" : "🎤"}
+                      {transcribing ? "…" : voiceMode ? (recording ? "🎙 Listening…" : "🔴 Voice") : "🎤"}
                     </button>
                     <button className="btn" onClick={send} disabled={sending || !input.trim()}>Send</button>
                   </div>
