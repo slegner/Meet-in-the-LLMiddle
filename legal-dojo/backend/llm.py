@@ -46,6 +46,9 @@ _GEMINI_MODELS: dict[str, str] = {
 }
 
 
+_NVIDIA_MODEL = os.environ.get("NVIDIA_NEMOTRON_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+
+
 class LLMError(RuntimeError):
     """Raised when a provider is misconfigured or a call fails."""
 
@@ -88,6 +91,62 @@ def _gemini_generate(prompt: str, system: str, role: str, json_mode: bool, tempe
         model=model, contents=prompt, config=types.GenerateContentConfig(**kwargs)
     )
     return (resp.text or "").strip()
+
+
+# ---------------------------------------------------------------------------
+# Nemotron adapter — used specifically for evaluate_criteria (deep judgment)
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=1)
+def _nvidia_client():
+    from openai import OpenAI
+    api_key = os.environ.get("NVIDIA_API_KEY")
+    if not api_key:
+        raise LLMError("NVIDIA_API_KEY is not set.")
+    return OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=api_key)
+
+
+def nemotron_generate_json(prompt: str, system: str = "") -> Any:
+    """Call Nemotron Super (streaming, thinking enabled) and parse the JSON response.
+
+    Nemotron Super is a reasoning model — thinking tokens arrive in
+    chunk.choices[0].delta.reasoning_content; the answer follows in .content.
+    Falls back to None on any error so callers can degrade to Gemini.
+    """
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+
+    try:
+        stream = _nvidia_client().chat.completions.create(
+            model=_NVIDIA_MODEL,
+            messages=messages,
+            temperature=1,
+            top_p=0.95,
+            max_tokens=2048,
+            extra_body={
+                "chat_template_kwargs": {"enable_thinking": True},
+                "reasoning_budget": 1024,
+            },
+            stream=True,
+        )
+        answer_parts: list[str] = []
+        for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            # reasoning_content = thinking tokens (we skip them — Nemotron thinks privately)
+            content = getattr(delta, "content", None)
+            if content:
+                answer_parts.append(content)
+        text = "".join(answer_parts).strip()
+        return _parse_json(text)
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"[nemotron] call failed ({exc}), will fall back to Gemini")
+        return None
 
 
 # ---------------------------------------------------------------------------

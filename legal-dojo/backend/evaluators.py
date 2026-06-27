@@ -236,7 +236,11 @@ def evaluate_criteria(case: dict[str, Any], session: dict[str, Any]) -> list[dic
         '"feedback": "2 sentences"}, ...6 items]}'
     )
 
-    data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.5)
+    # Nemotron Super (reasoning model) is used here for calibrated judgment.
+    # Falls back to Gemini if the NVIDIA key is unavailable.
+    data = llm.nemotron_generate_json(prompt, system=system)
+    if data is None:
+        data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.5)
     items = (data.get("criteria") if isinstance(data, dict) else None) or []
 
     # Normalise and fill gaps so the frontend always gets exactly 6 items

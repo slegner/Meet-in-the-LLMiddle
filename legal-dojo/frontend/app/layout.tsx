@@ -4,7 +4,7 @@ import Link from "next/link";
 import GuideButton from "./components/GuideButton";
 
 export const metadata: Metadata = {
-  title: "Legal Dojo",
+  title: "Meet at the LLMiddle",
   description: "Train against a strategic AI negotiator.",
 };
 
@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="topbar">
           <div className="topbar-inner">
             <Link href="/" className="brand" style={{ textDecoration: "none" }}>
-              ⚖ LEGAL DOJO
+              ⚖ MEET AT THE LLMIDDLE
             </Link>
             <nav className="nav">
               <Link href="/">New Simulation</Link>

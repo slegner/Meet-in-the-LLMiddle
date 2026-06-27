@@ -137,7 +137,7 @@ def build_report_pdf(case: dict[str, Any], session: dict[str, Any]) -> bytes:
 def build_transcript_md(case: dict[str, Any], session: dict[str, Any]) -> str:
     notes = {n["turn"]: n["note"] for n in session.get("ai_memory", [])}
     lines = [
-        f"# Legal Dojo - {case['title']}",
+        f"# Meet at the LLMiddle - {case['title']}",
         f"You played: {session.get('side')} | Turns: {len(session.get('turns', []))}",
         "",
     ]
