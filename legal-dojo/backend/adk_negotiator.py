@@ -28,7 +28,7 @@ load_dotenv(Path(__file__).parent / ".env", override=True)
 os.environ.setdefault("GOOGLE_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "FALSE"
 
-from google.adk.agents import LlmAgent, SequentialAgent  # noqa: E402
+from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent  # noqa: E402
 from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai import types  # noqa: E402
 
@@ -38,7 +38,7 @@ import store  # noqa: E402
 FLASH = os.environ.get("LLM_FLASH_MODEL", "gemini-2.5-flash")
 LITE = os.environ.get("LLM_LITE_MODEL", "gemini-2.5-flash-lite")
 APP_NAME = "legal_dojo"
-N_CANDIDATES = 3
+N_CANDIDATES = 2
 
 
 def _cfg(temperature: float):
@@ -116,7 +116,7 @@ adversary = LlmAgent(
 
 predictor = LlmAgent(
     name="predictor",
-    model=FLASH,
+    model=LITE,
     output_schema=Selection,
     output_key="sel",
     generate_content_config=_cfg(0.4),
@@ -146,7 +146,11 @@ notetaker = LlmAgent(
     ),
 )
 
-team = SequentialAgent(name="negotiation_turn", sub_agents=[director, adversary, predictor, notetaker])
+# NoteTaker only reads seeded state (notes + the student's message), so it runs
+# in PARALLEL with the Director->Adversary->Predictor reply chain — taking it off
+# the critical path.
+reply_chain = SequentialAgent(name="reply_chain", sub_agents=[director, adversary, predictor])
+team = ParallelAgent(name="negotiation_turn", sub_agents=[reply_chain, notetaker])
 _runner = InMemoryRunner(agent=team, app_name=APP_NAME)
 
 
