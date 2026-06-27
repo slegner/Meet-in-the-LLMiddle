@@ -84,6 +84,7 @@ function Scene() {
   const [ending, setEnding] = useState(false);
   const [ended, setEnded] = useState(false);
 
+  const [emotion, setEmotion] = useState<"neutral" | "annoyed" | "deal">("neutral");
   const [voiceOn, setVoiceOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -159,6 +160,7 @@ function Scene() {
       setMessages((m) => [...m, { role: "ai", text: res.adversary }]);
       setTurns(res.turn_number);
       setPhase(res.phase);
+      setEmotion(res.emotion ?? "neutral");
       speak(res.adversary);
     } catch {
       setMessages((m) => m.slice(0, -1));
@@ -258,7 +260,11 @@ function Scene() {
           <div className="stage-wrap">
             <div className="stage">
               <img src="/Human.png" alt="You" className={`char human ${speaker === "player" ? "active" : "dim"}`} />
-              <img src="/AI.png" alt="AI opponent" className={`char robot ${speaker === "ai" ? "active" : "dim"}`} />
+              <img
+                src={emotion === "annoyed" ? "/AI_annoyed.png" : emotion === "deal" ? "/AI_deal.png" : "/AI.png"}
+                alt="AI opponent"
+                className={`char robot ${speaker === "ai" ? "active" : "dim"}`}
+              />
 
               <div className="dialogue">
                 <div className={`pointer ${speaker === "player" ? "left" : "right"}`} />

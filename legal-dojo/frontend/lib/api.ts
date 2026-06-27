@@ -47,6 +47,7 @@ export interface ChatResponse {
   adversary: string;
   turn_number: number;
   phase: string;
+  emotion: "neutral" | "annoyed" | "deal";
 }
 
 export interface SessionCard {

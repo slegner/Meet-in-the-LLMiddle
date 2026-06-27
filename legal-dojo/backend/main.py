@@ -126,7 +126,14 @@ def chat(sid: str, req: ChatRequest):
         raise HTTPException(409, "This negotiation has already ended.")
     turn = agents.run_turn(case, session, req.message)
     store.save_session(session)
-    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=turn["phase"])
+    phase = turn["phase"]
+    if phase in ("aggressive", "firm"):
+        emotion = "annoyed"
+    elif phase in ("concede", "compromise"):
+        emotion = "deal"
+    else:
+        emotion = "neutral"
+    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase, emotion=emotion)
 
 
 @app.post("/sessions/{sid}/end")

@@ -25,6 +25,7 @@ class ChatResponse(BaseModel):
     adversary: str
     turn_number: int
     phase: str
+    emotion: str  # "neutral" | "annoyed" | "deal"
 
 
 class EndRequest(BaseModel):
