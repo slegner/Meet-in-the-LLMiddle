@@ -22,6 +22,7 @@ export interface CaseDetail {
   title: string;
   summary: string;
   background: string;
+  sources?: string[];
   sides: Record<Side, SideInfo>;
 }
 

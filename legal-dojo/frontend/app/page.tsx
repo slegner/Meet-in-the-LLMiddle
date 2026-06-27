@@ -163,6 +163,21 @@ export default function StartPage() {
         <hr />
         <p style={{ fontStyle: "italic" }}>{detail.summary}</p>
         <p>{detail.background}</p>
+        {detail.sources && detail.sources.length > 0 && (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            <span className="muted" style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Sources</span>
+            <ul style={{ margin: "6px 0 0", padding: "0 0 0 18px" }}>
+              {detail.sources.map((url, i) => (
+                <li key={i} style={{ fontSize: 12, marginBottom: 3 }}>
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: "var(--accent)", wordBreak: "break-all" }}>
+                    {url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <h3 style={{ marginTop: 24 }}>Choose your side</h3>

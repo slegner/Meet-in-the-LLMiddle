@@ -176,7 +176,11 @@ def build_sides(parsed: dict[str, Any]) -> dict[str, Any]:
 # Stage 3 — Assembler (pure code)
 # ---------------------------------------------------------------------------
 
-def assemble_case(parsed: dict[str, Any], sides: dict[str, Any]) -> dict[str, Any]:
+def assemble_case(
+    parsed: dict[str, Any],
+    sides: dict[str, Any],
+    sources: list[str] | None = None,
+) -> dict[str, Any]:
     """Merge parser + side builder output into the case JSON schema."""
     title   = parsed.get("title", "Untitled Case")
     case_id = _slugify(title)
@@ -186,6 +190,7 @@ def assemble_case(parsed: dict[str, Any], sides: dict[str, Any]) -> dict[str, An
         "summary":          parsed.get("summary", ""),
         "background":       parsed.get("background", ""),
         "shared_documents": parsed.get("shared_documents", []),
+        "sources":          sources or [],
         "sides":            sides,
     }
 
@@ -204,10 +209,12 @@ def generate_case(query: str) -> dict[str, Any]:
     Returns:
         Case dict matching the existing case JSON schema, ready to save.
     """
-    raw    = search_perplexity(query)
-    parsed = parse_case(raw)
-    sides  = build_sides(parsed)
-    return assemble_case(parsed, sides)
+    result  = search_perplexity(query)
+    raw     = result["text"]
+    sources = result.get("citations", [])
+    parsed  = parse_case(raw)
+    sides   = build_sides(parsed)
+    return assemble_case(parsed, sides, sources=sources)
 
 
 def generate_case_from_text(raw_text: str) -> dict[str, Any]:

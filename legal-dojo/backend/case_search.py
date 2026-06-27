@@ -22,11 +22,11 @@ class CaseSearchError(RuntimeError):
     pass
 
 
-def search_perplexity(query: str, max_chars: int = 8000) -> str:
+def search_perplexity(query: str, max_chars: int = 8000) -> dict:
     """Ask Perplexity for a detailed factual account of a real legal dispute.
 
-    Returns a prose description (with inline citations) that the Case Parser
-    Agent can extract structure from. Raises CaseSearchError on failure.
+    Returns {"text": str, "citations": list[str]} where citations are the
+    source URLs Perplexity used. Raises CaseSearchError on failure.
     """
     if not PERPLEXITY_API_KEY:
         raise CaseSearchError(
@@ -74,6 +74,6 @@ def search_perplexity(query: str, max_chars: int = 8000) -> str:
     text = data["choices"][0]["message"]["content"]
     citations = data.get("citations", [])
     if citations:
-        text += "\n\nSOURCES:\n" + "\n".join(f"- {c}" for c in citations[:5])
+        text += "\n\nSOURCES:\n" + "\n".join(f"- {c}" for c in citations[:8])
 
-    return text[:max_chars]
+    return {"text": text[:max_chars], "citations": citations[:8]}

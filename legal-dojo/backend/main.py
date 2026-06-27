@@ -75,6 +75,7 @@ def get_case(case_id: str):
         "title": case["title"],
         "summary": case.get("summary", ""),
         "background": case["background"],
+        "sources": case.get("sources", []),
         "sides": {
             s: {
                 "role": case["sides"][s]["role"],
