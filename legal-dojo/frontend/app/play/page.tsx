@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { postChat, endSession, getSession, ttsUrl, type Report } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
@@ -14,6 +14,7 @@ interface Msg { role: "player" | "ai"; text: string }
 
 function Scene() {
   const sid = useSearchParams().get("sid") ?? "";
+  const router = useRouter();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -223,8 +224,13 @@ function Scene() {
       {showCaseFile && <CaseFileOverlay sid={sid} onClose={() => setShowCaseFile(false)} />}
       {showHistory && <HistoryOverlay onClose={() => setShowHistory(false)} />}
       {ended && report && (
-        <Overlay title="Coaching Report" onClose={() => setEnded(false)}>
+        <Overlay title="Coaching Report" onClose={() => router.push("/")} wide>
           <ReportView sid={sid} report={report} />
+          <div style={{ marginTop: 18 }}>
+            <button className="btn" onClick={() => router.push("/")}>
+              ← Back to Case Files (start a new case)
+            </button>
+          </div>
         </Overlay>
       )}
     </div>

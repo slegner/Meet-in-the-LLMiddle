@@ -62,7 +62,7 @@ export default function StartPage() {
   const sides: Side[] = ["tenant", "landlord"];
 
   return (
-    <div className="container narrow">
+    <div className="container" style={{ maxWidth: 1280 }}>
       {resume && (
         <section className="card" style={{ borderColor: "var(--accent)" }}>
           <div className="row-between">
@@ -80,12 +80,16 @@ export default function StartPage() {
       )}
 
       <h1>New Simulation</h1>
-      <p className="subtitle">Pick a case, choose your side, and negotiate against the AI.</p>
+      <p className="subtitle">Read the case file, choose your side, and negotiate against the AI.</p>
 
-      <section className="card">
-        <h2>{detail.title}</h2>
-        <p className="muted" style={{ marginTop: 0 }}>{detail.summary}</p>
-        <p style={{ fontSize: 14 }}>{detail.background}</p>
+      <section className="paper">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0 }}>{detail.title}</h2>
+          <span className="stamp">Case File</span>
+        </div>
+        <hr />
+        <p style={{ fontStyle: "italic" }}>{detail.summary}</p>
+        <p>{detail.background}</p>
       </section>
 
       <h3 style={{ marginTop: 24 }}>Choose your side</h3>

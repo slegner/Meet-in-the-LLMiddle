@@ -38,7 +38,7 @@ export default function HistoryOverlay({ onClose }: { onClose: () => void }) {
 
   if (openSid && report) {
     return (
-      <Overlay title="Past Simulation" onClose={onClose}>
+      <Overlay title="Past Simulation" onClose={onClose} wide>
         <button className="btn btn-secondary" style={{ marginBottom: 12 }} onClick={() => { setOpenSid(null); setReport(null); }}>
           ← Back to list
         </button>
@@ -48,7 +48,7 @@ export default function HistoryOverlay({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Overlay title="Previous Simulations" onClose={onClose}>
+    <Overlay title="Previous Simulations" onClose={onClose} wide>
       <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
         Your current negotiation stays open underneath — browsing here won't end it.
       </p>
