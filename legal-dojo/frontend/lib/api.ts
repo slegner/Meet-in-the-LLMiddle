@@ -77,10 +77,16 @@ export interface Report {
   weak_spots: string[];
 }
 
+export interface Observation {
+  text: string;
+  sessions_since_last_seen: number;
+  added_at: string | null;
+}
+
 export interface Profile {
   display_name: string;
   notes: string;
-  observations: string[];
+  observations: Observation[];
   updated_at?: string | null;
 }
 

@@ -2,15 +2,69 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { postChat, endSession, getSession, ttsUrl, type Report } from "@/lib/api";
+import { postChat, endSession, getSession, getCaseFile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
-import CaseFileOverlay from "../components/CaseFileOverlay";
 import HistoryOverlay from "../components/HistoryOverlay";
 import ReportView from "../components/ReportView";
 import Overlay from "../components/Overlay";
 
 interface Msg { role: "player" | "ai"; text: string }
+
+function CaseFilePanel({ cf }: { cf: CaseFile }) {
+  return (
+    <div style={{
+      flex: 1,
+      minHeight: 0,
+      overflowY: "auto",
+      background: "#f4ecd2",
+      color: "#2c2412",
+      border: "1px solid #cbb783",
+      borderRadius: 8,
+      padding: "20px 20px",
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      fontSize: 15,
+      lineHeight: 1.65,
+    }}>
+      <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 3, color: "#3a2c10" }}>{cf.title}</div>
+      <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.6px", color: "#8a6a1e", marginBottom: 10 }}>
+        Counsel for {cf.side}
+      </div>
+      <hr style={{ border: "none", borderTop: "1px solid #cbb783", margin: "6px 0 10px" }} />
+
+      {[
+        ["Background", cf.background],
+        ["Your Role", cf.role],
+        ["Goal", cf.goal],
+        ["BATNA", cf.batna],
+      ].map(([label, text]) => (
+        <div key={label} style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 4 }}>{label}</div>
+          <p style={{ margin: 0 }}>{text}</p>
+        </div>
+      ))}
+
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 3 }}>Objectives</div>
+        <ul style={{ margin: 0, paddingLeft: 14 }}>
+          {cf.objectives.map((o, i) => <li key={i} style={{ marginBottom: 3 }}>{o}</li>)}
+        </ul>
+      </div>
+
+      {cf.documents.length > 0 && (
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 8 }}>Documents</div>
+          {cf.documents.map((d, i) => (
+            <div key={i} style={{ borderLeft: "2px solid #a9842c", paddingLeft: 10, marginBottom: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{d.name}</div>
+              <div style={{ fontSize: 13, color: "#6a5a33" }}>{d.summary}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Scene() {
   const sid = useSearchParams().get("sid") ?? "";
@@ -23,7 +77,8 @@ function Scene() {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [showCaseFile, setShowCaseFile] = useState(false);
+  const [caseFileOpen, setCaseFileOpen] = useState(true);
+  const [caseFile, setCaseFile] = useState<CaseFile | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
   const [ending, setEnding] = useState(false);
@@ -36,11 +91,9 @@ function Scene() {
     if (!voiceOn || !text) return;
     try {
       if (!audioRef.current) audioRef.current = new Audio();
-      audioRef.current.src = ttsUrl(text); // streams + plays progressively
-      audioRef.current.play().catch(() => {}); // ignore autoplay blocks
-    } catch {
-      /* TTS is best-effort; text still works */
-    }
+      audioRef.current.src = ttsUrl(text);
+      audioRef.current.play().catch(() => {});
+    } catch { /* TTS is best-effort */ }
   }
 
   const histRef = useRef<HTMLDivElement>(null);
@@ -48,8 +101,6 @@ function Scene() {
     if (expanded) histRef.current?.scrollTo({ top: histRef.current.scrollHeight });
   }, [messages, expanded]);
 
-  // Resume: rebuild the conversation from the saved session and remember this
-  // as the active game so we can return to the current stage later.
   useEffect(() => {
     if (!sid) return;
     getSession(sid)
@@ -70,10 +121,10 @@ function Scene() {
         }
       })
       .catch(() => {});
+
+    getCaseFile(sid).then(setCaseFile).catch(() => {});
   }, [sid]);
 
-  // While the 4-agent team runs (~6-7s), cycle a themed status so the wait
-  // reads as "the opponent is strategising" rather than "stuck".
   const THINKING = [
     "Opposing counsel is strategising…",
     "weighing several lines of attack…",
@@ -98,7 +149,7 @@ function Scene() {
   async function send() {
     const text = input.trim();
     if (!text || sending || ended) return;
-    stopSpeaking(); // cut off the opponent if they're still talking
+    stopSpeaking();
     setError(null);
     setInput("");
     setMessages((m) => [...m, { role: "player", text }]);
@@ -110,8 +161,6 @@ function Scene() {
       setPhase(res.phase);
       speak(res.adversary);
     } catch {
-      // Roll back the optimistic bubble and give the text back so the turn
-      // isn't lost — the user can just press Send again.
       setMessages((m) => m.slice(0, -1));
       setInput(text);
       setError("The opponent didn't respond (likely the Gemini API is rate-limited). Your message was kept — press Send to retry.");
@@ -137,7 +186,6 @@ function Scene() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   }
 
-  // Current dialogue line + who is speaking.
   const last = messages[messages.length - 1];
   const speaker: "player" | "ai" = sending ? "ai" : last?.role ?? "player";
   const lineText = sending
@@ -147,81 +195,104 @@ function Scene() {
 
   return (
     <div className="container wide">
-      <div className="dojo">
-        {/* Left controls (outside the stage) */}
-        <div className="side-rail">
-          <button className="btn btn-secondary btn-block" onClick={() => setShowCaseFile(true)}>📁 Case File</button>
-          <button className="btn btn-danger btn-block" onClick={end} disabled={ending || ended}>
-            {ending ? "Scoring…" : ended ? "Ended" : "⏹ End"}
-          </button>
-          <button
-            className="btn btn-secondary btn-block"
-            onClick={() => {
-              setVoiceOn((v) => {
-                if (v && audioRef.current) audioRef.current.pause();
-                return !v;
-              });
-            }}
-            title="Toggle the opponent's voice"
-          >
-            {voiceOn ? "🔊 Voice on" : "🔇 Voice off"}
-          </button>
-          <div className="turn-counter">Turn {turns}{phase && <span className="phase-pill">{phase}</span>}</div>
+
+      {/* ── Button bar ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+        <button
+          className="btn btn-secondary"
+          style={{ borderColor: caseFileOpen ? "var(--accent)" : undefined }}
+          onClick={() => setCaseFileOpen((v) => !v)}
+        >
+          📁 {caseFileOpen ? "Close File" : "Case File"}
+        </button>
+        <button className="btn btn-danger" onClick={end} disabled={ending || ended}>
+          {ending ? "Scoring…" : ended ? "Ended" : "⏹ End"}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => setVoiceOn((v) => {
+            if (v && audioRef.current) audioRef.current.pause();
+            return !v;
+          })}
+        >
+          {voiceOn ? "🔊 Voice on" : "🔇 Voice off"}
+        </button>
+        <div className="turn-counter" style={{ margin: "0 4px" }}>
+          Turn {turns}{phase && <span className="phase-pill">{phase}</span>}
         </div>
+        <div style={{ flex: 1 }} />
+        <button className="btn btn-secondary" onClick={() => setShowHistory(true)}>
+          🏆 Previous Simulations
+        </button>
+      </div>
 
-        {/* The game stage */}
-        <div className="stage-wrap">
-          <div className="stage">
-            <img src="/Human.png" alt="You" className={`char human ${speaker === "player" ? "active" : "dim"}`} />
-            <img src="/AI.png" alt="AI opponent" className={`char robot ${speaker === "ai" ? "active" : "dim"}`} />
+      {/* ── Case file + stage ── */}
+      <div style={{ display: "flex", gap: 16, alignItems: "stretch", justifyContent: "center" }}>
 
-            <div className="dialogue">
-              <div className={`pointer ${speaker === "player" ? "left" : "right"}`} />
-              <div className="speaker">
-                <span>{speakerName}</span>
-                <button className="expand-btn" onClick={() => setExpanded((e) => !e)}>
-                  {expanded ? "▲ hide history" : "▼ show history"}
-                </button>
-              </div>
-
-              {!expanded && <div className="line">{lineText}</div>}
-
-              {expanded && (
-                <div className="history-scroll" ref={histRef}>
-                  {messages.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No messages yet.</div>}
-                  {messages.map((m, i) => (
-                    <div className={`h-line ${m.role}`} key={i}>
-                      <span className="who">{m.role === "player" ? "You" : "Opposing Counsel"}</span>
-                      {m.text}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!ended && (
-                <div className="composer">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    placeholder="Type your argument… (Enter to send)"
-                    disabled={sending}
-                  />
-                  <button className="btn" onClick={send} disabled={sending || !input.trim()}>Send</button>
-                </div>
-              )}
-            </div>
+        {/* Case file column — outer clips so content doesn't squish */}
+        <div style={{
+          width: caseFileOpen ? 700 : 0,
+          flexShrink: 0,
+          overflow: "hidden",
+          transition: "width 0.3s ease",
+          display: "flex",
+        }}>
+          <div style={{ width: 700, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+            {caseFile
+              ? <CaseFilePanel cf={caseFile} />
+              : <div className="muted" style={{ fontSize: 13, paddingTop: 8 }}>Loading…</div>}
           </div>
-          {error && <p className="weak" style={{ marginTop: 10 }}>{error}</p>}
         </div>
 
-        {/* Right controls (outside the stage) */}
-        <div className="side-rail right">
-          <button className="btn btn-secondary btn-block" onClick={() => setShowHistory(true)}>🏆 Previous Simulations</button>
+        {/* Stage — max-width keeps it centred when case file is closed */}
+        <div style={{ flex: "1 1 auto", minWidth: 0, maxWidth: 1200 }}>
+          <div className="stage-wrap">
+            <div className="stage">
+              <img src="/Human.png" alt="You" className={`char human ${speaker === "player" ? "active" : "dim"}`} />
+              <img src="/AI.png" alt="AI opponent" className={`char robot ${speaker === "ai" ? "active" : "dim"}`} />
+
+              <div className="dialogue">
+                <div className={`pointer ${speaker === "player" ? "left" : "right"}`} />
+                <div className="speaker">
+                  <span>{speakerName}</span>
+                  <button className="expand-btn" onClick={() => setExpanded((e) => !e)}>
+                    {expanded ? "▲ hide history" : "▼ show history"}
+                  </button>
+                </div>
+
+                {!expanded && <div className="line">{lineText}</div>}
+
+                {expanded && (
+                  <div className="history-scroll" ref={histRef}>
+                    {messages.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No messages yet.</div>}
+                    {messages.map((m, i) => (
+                      <div className={`h-line ${m.role}`} key={i}>
+                        <span className="who">{m.role === "player" ? "You" : "Opposing Counsel"}</span>
+                        {m.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!ended && (
+                  <div className="composer">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      placeholder="Type your argument… (Enter to send)"
+                      disabled={sending}
+                    />
+                    <button className="btn" onClick={send} disabled={sending || !input.trim()}>Send</button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {error && <p className="weak" style={{ marginTop: 10 }}>{error}</p>}
+          </div>
         </div>
       </div>
 
-      {showCaseFile && <CaseFileOverlay sid={sid} onClose={() => setShowCaseFile(false)} />}
       {showHistory && <HistoryOverlay onClose={() => setShowHistory(false)} />}
       {ended && report && (
         <Overlay title="Coaching Report" onClose={() => router.push("/")} wide>
