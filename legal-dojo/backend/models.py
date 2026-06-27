@@ -9,6 +9,7 @@ from pydantic import BaseModel
 class StartRequest(BaseModel):
     case_id: str
     side: str  # "tenant" | "landlord"
+    personality: str = "default"
 
 
 class StartResponse(BaseModel):

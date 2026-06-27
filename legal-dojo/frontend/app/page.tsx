@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   listCases,
+  listPersonalities,
   getCase,
   startSession,
   getSession,
   type CaseSummary,
   type CaseDetail,
   type Side,
+  type Personality,
 } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
@@ -19,6 +21,8 @@ export default function StartPage() {
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [detail, setDetail] = useState<CaseDetail | null>(null);
   const [side, setSide] = useState<Side | null>(null);
+  const [personality, setPersonality] = useState("default");
+  const [personalityList, setPersonalityList] = useState<Personality[]>([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<{ sid: string; turns: number; side: Side } | null>(null);
@@ -30,6 +34,7 @@ export default function StartPage() {
         if (cs[0]) return getCase(cs[0].id).then(setDetail);
       })
       .catch(() => setError("Could not reach the backend on :8000. Is it running?"));
+    listPersonalities().then(setPersonalityList).catch(() => {});
   }, []);
 
   // Offer to resume an unfinished game if one is remembered.
@@ -48,7 +53,7 @@ export default function StartPage() {
     if (!detail || !side) return;
     setStarting(true);
     try {
-      const res = await startSession(detail.id, side);
+      const res = await startSession(detail.id, side, personality);
       router.push(`/play?sid=${res.session_id}`);
     } catch {
       setError("Could not start the simulation.");
@@ -107,6 +112,32 @@ export default function StartPage() {
           </div>
         ))}
       </div>
+
+      {personalityList.length > 1 && (
+        <>
+          <h3 style={{ marginTop: 24 }}>Opponent personality</h3>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {personalityList.map((p) => (
+              <div
+                key={p.id}
+                onClick={() => setPersonality(p.id)}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  border: `2px solid ${personality === p.id ? "var(--accent)" : "var(--border)"}`,
+                  background: personality === p.id ? "rgba(198,160,79,0.12)" : "var(--panel)",
+                  minWidth: 140,
+                  transition: "border-color 0.15s",
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 3 }}>{p.label}</div>
+                <div className="muted" style={{ fontSize: 12 }}>{p.description}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div style={{ marginTop: 22 }}>
         <button className="btn" onClick={begin} disabled={!side || starting}>

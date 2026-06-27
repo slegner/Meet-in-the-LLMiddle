@@ -119,8 +119,15 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
 
 export const listCases = () => getJSON<CaseSummary[]>("/cases");
 export const getCase = (id: string) => getJSON<CaseDetail>(`/cases/${id}`);
-export const startSession = (case_id: string, side: Side) =>
-  send<StartResponse>("POST", "/sessions", { case_id, side });
+export interface Personality {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export const listPersonalities = () => getJSON<Personality[]>("/personalities");
+export const startSession = (case_id: string, side: Side, personality = "default") =>
+  send<StartResponse>("POST", "/sessions", { case_id, side, personality });
 export const getCaseFile = (sid: string) =>
   getJSON<CaseFile>(`/sessions/${sid}/casefile`);
 export const postChat = (sid: string, message: string) =>

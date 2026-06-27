@@ -92,7 +92,7 @@ def new_session_id() -> str:
     return f"{stamp}-{secrets.token_hex(2)}"
 
 
-def create_session(case_id: str, side: str) -> dict[str, Any]:
+def create_session(case_id: str, side: str, personality: str = "default") -> dict[str, Any]:
     if side not in SIDES:
         raise ValueError(f"Invalid side: {side}")
     case = load_case(case_id)  # validates the case exists
@@ -101,6 +101,7 @@ def create_session(case_id: str, side: str) -> dict[str, Any]:
         "case_id": case_id,
         "case_title": case["title"],
         "side": side,
+        "personality": personality,
         "status": "active",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "ended_at": None,

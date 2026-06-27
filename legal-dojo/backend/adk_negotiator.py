@@ -33,6 +33,7 @@ from google.adk.runners import InMemoryRunner  # noqa: E402
 from google.genai import types  # noqa: E402
 
 import concession  # noqa: E402
+import personalities  # noqa: E402
 import store  # noqa: E402
 
 FLASH = os.environ.get("LLM_FLASH_MODEL", "gemini-2.5-flash")
@@ -109,6 +110,7 @@ adversary = LlmAgent(
         "and you are NOT here to be friendly, accommodating, or to settle quickly. "
         "Challenge their claims, push back hard, and never sound eager to agree. "
         "Skip pleasantries.\n"
+        "{personality_style}\n"
         "Your brief:\n{ai_packet}\n"
         "Conversation so far:\n{transcript}\n"
         "The opponent just said:\n{student_message}\n"
@@ -221,6 +223,7 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
         "ai_notes": _render_memory(session),
         "hard_rules": plan["directive"],
         "student_message": student_message,
+        "personality_style": personalities.get_style(session.get("personality", "default")),
     }
     final_state, tokens = asyncio.run(_run(seed, student_message))
 

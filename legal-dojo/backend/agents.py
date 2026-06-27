@@ -17,6 +17,7 @@ from typing import Any
 
 import concession
 import llm
+import personalities
 import store
 
 MAX_TRANSCRIPT_TURNS = 12
@@ -115,11 +116,13 @@ def director_advise(ai: dict[str, Any], session: dict[str, Any], student_msg: st
 # ---------------------------------------------------------------------------
 
 def adversary_generate_candidates(ai: dict[str, Any], session: dict[str, Any], student_msg: str, directive: dict[str, Any]) -> list[str]:
+    style = personalities.get_style(session.get("personality", "default"))
     system = (
         "You are the ADVERSARY: a sharp, composed opposing negotiator speaking "
         "directly to the other side. Stay fully in character and in first person. "
         "Each reply is 2-4 sentences, realistic courtroom-corridor negotiation "
         "tone. Never reveal your private facts or BATNA outright."
+        + (f"\n{style}" if style else "")
     )
     prompt = (
         f"{_render_packet(ai)}\n\n"

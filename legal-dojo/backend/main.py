@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import agents
 import evaluators
+import personalities
 import player_memory
 import report_pdf
 import store
@@ -73,10 +74,15 @@ def get_case(case_id: str):
 # Sessions
 # ---------------------------------------------------------------------------
 
+@app.get("/personalities")
+def list_personalities():
+    return personalities.list_personalities()
+
+
 @app.post("/sessions", response_model=StartResponse)
 def start_session(req: StartRequest):
     try:
-        session = store.create_session(req.case_id, req.side)
+        session = store.create_session(req.case_id, req.side, personality=req.personality)
     except (FileNotFoundError, ValueError) as e:
         raise HTTPException(400, str(e))
     return StartResponse(session_id=session["id"], side=session["side"], case_title=session["case_title"])
