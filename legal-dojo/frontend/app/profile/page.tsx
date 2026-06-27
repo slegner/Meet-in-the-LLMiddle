@@ -45,11 +45,22 @@ export default function ProfilePage() {
   const [sessions, setSessions] = useState<SessionCard[] | null>(null);
   const [openReport, setOpenReport] = useState<{ sid: string; report: Report } | null>(null);
   const [fadingOpen, setFadingOpen] = useState(false);
+  // Local string states for the timer inputs so the field can be fully cleared while editing
+  const [idleStr, setIdleStr] = useState("");
+  const [responseStr, setResponseStr] = useState("");
 
   useEffect(() => {
     getProfile().then(setProfile).catch(() => setError("Could not load your profile."));
     listSessions().then(setSessions).catch(() => {});
   }, []);
+
+  // Sync timer display strings when profile loads or is saved
+  useEffect(() => {
+    if (!profile) return;
+    setIdleStr(String(profile.timer_idle_secs ?? 120));
+    const mins = (profile.timer_response_secs ?? 300) / 60;
+    setResponseStr(Number.isInteger(mins) ? String(mins) : mins.toFixed(1));
+  }, [profile?.timer_idle_secs, profile?.timer_response_secs]);
 
   async function viewReport(sid: string) {
     if (openReport?.sid === sid) { setOpenReport(null); return; }
@@ -71,9 +82,12 @@ export default function ProfilePage() {
 
   async function save() {
     if (!profile) return;
+    const idleSecs = Math.max(10, parseInt(idleStr) || 120);
+    const responseSecs = Math.max(60, Math.round((parseFloat(responseStr) || 5) * 60));
+    const toSave = { ...profile, timer_idle_secs: idleSecs, timer_response_secs: responseSecs };
     setStatus("Saving…");
     try {
-      const saved = await saveProfile(profile);
+      const saved = await saveProfile(toSave);
       setProfile(saved);
       setStatus("Saved ✓");
     } catch {
@@ -134,8 +148,8 @@ export default function ProfilePage() {
                   <input
                     type="number"
                     min={10} max={600} step={5}
-                    value={profile.timer_idle_secs ?? 120}
-                    onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v)) update("timer_idle_secs", v); }}
+                    value={idleStr}
+                    onChange={(e) => setIdleStr(e.target.value)}
                     style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
                   />
                   <span className="muted">sec</span>
@@ -148,8 +162,8 @@ export default function ProfilePage() {
                   <input
                     type="number"
                     min={1} max={30} step={0.5}
-                    value={((profile.timer_response_secs ?? 300) / 60).toFixed(1).replace(/\.0$/, "")}
-                    onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) update("timer_response_secs", Math.round(v * 60)); }}
+                    value={responseStr}
+                    onChange={(e) => setResponseStr(e.target.value)}
                     style={{ width: 70, padding: "4px 6px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel)", color: "var(--text)" }}
                   />
                   <span className="muted">min</span>
