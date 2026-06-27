@@ -49,6 +49,19 @@ _STRONG_ARGUMENT_SIGNALS = (
 COMPROMISE_MIN = int(os.environ.get("COMPROMISE_MIN", "6"))
 COMPROMISE_MAX = int(os.environ.get("COMPROMISE_MAX", "12"))
 
+# Consecutive turns a student must hit the same criterion to earn merit concessions.
+MERIT_STREAK_MINOR = 2   # small concession; streak resets to 1 so it can keep building
+MERIT_STREAK_MAJOR = 4   # significant concession; full streak reset
+
+_CRITERIA_SHORT = [
+    "Position accuracy",
+    "Case preparation",
+    "Interest-based thinking",
+    "Concession discipline",
+    "Tactical flexibility",
+    "Realistic expectations",
+]
+
 
 def init_state() -> dict[str, Any]:
     return {
@@ -56,6 +69,7 @@ def init_state() -> dict[str, Any]:
         "recent_demands": [],   # normalized demand signatures, newest last
         "phase_history": [],    # phase used each AI turn
         "compromise_turn": random.randint(COMPROMISE_MIN, COMPROMISE_MAX),
+        "criterion_streak": {"name": "", "count": 0, "minor_given": False},
     }
 
 
@@ -65,7 +79,54 @@ def ensure(state: dict[str, Any]) -> dict[str, Any]:
     state.setdefault("recent_demands", [])
     state.setdefault("phase_history", [])
     state.setdefault("compromise_turn", random.randint(COMPROMISE_MIN, COMPROMISE_MAX))
+    state.setdefault("criterion_streak", {"name": "", "count": 0, "minor_given": False})
     return state
+
+
+def update_criterion_streak(state: dict[str, Any], criterion_hit: str) -> None:
+    """Record which criterion the student demonstrated strongly this turn (or "" for none).
+
+    Call this AFTER the AI has replied so the streak is ready for the next turn.
+    """
+    streak = state.setdefault("criterion_streak", {"name": "", "count": 0, "minor_given": False})
+    if criterion_hit and criterion_hit == streak.get("name", ""):
+        streak["count"] = streak.get("count", 0) + 1
+    elif criterion_hit:
+        streak["name"] = criterion_hit
+        streak["count"] = 1
+        streak["minor_given"] = False
+    else:
+        streak["count"] = max(0, streak.get("count", 0) - 1)
+        if streak["count"] == 0:
+            streak["name"] = ""
+            streak["minor_given"] = False
+
+
+def check_and_consume_merit_concession(state: dict[str, Any]) -> tuple[str, str]:
+    """Return (level, criterion_name) where level is 'major', 'minor', or 'none'.
+
+    Streak of 2 → 'minor' concession (fires once per streak, not every turn).
+    Streak of 4 → 'major' concession (full streak reset).
+    The minor fires exactly once at count=2; the count keeps climbing toward 4
+    where the major fires and resets everything.
+    """
+    streak = state.get("criterion_streak", {"name": "", "count": 0, "minor_given": False})
+    count = streak.get("count", 0)
+    name = streak.get("name", "")
+    if not name:
+        return "none", ""
+    if count >= MERIT_STREAK_MAJOR:
+        streak["count"] = 0
+        streak["minor_given"] = False
+        return "major", name
+    if count >= MERIT_STREAK_MINOR and not streak.get("minor_given", False):
+        streak["minor_given"] = True  # don't fire again until major or streak breaks
+        return "minor", name
+    return "none", ""
+
+
+def criteria_list_for_prompt() -> str:
+    return "\n".join(f"  {i+1}. {c}" for i, c in enumerate(_CRITERIA_SHORT))
 
 
 def detect_strong_argument(message: str) -> bool:

@@ -107,12 +107,16 @@ def director_advise(ai: dict[str, Any], session: dict[str, Any], student_msg: st
         f"OPPONENT'S LATEST MESSAGE:\n{student_msg}\n\n"
         f"HARD RULES FOR THIS TURN (must obey): {plan['directive']}\n"
         + (f"\nKNOWN OPPONENT TENDENCIES (exploit these): {digest}\n" if digest else "")
+        + f"\nAlso assess the student's message against these 6 criteria:\n"
+        + concession.criteria_list_for_prompt()
+        + "\nSet criterion_hit to the short criterion name if they clearly demonstrated "
+        "one strongly, or \"\" if not.\n"
         + "\nDecide the tactic for this turn. Return JSON: "
         '{"tactic": "<cite_document | cite_clause | legal_argument | factual_counter | '
         'anchor_high | reject | reframe | small_concession | drive_compromise | bluff>", '
-        '"reasoning": "<1-2 sentences of private strategy>", '
-        '"instruction": "<concrete instruction — name the specific fact, document, or '
-        'provision the negotiator should reference>"}'
+        '"reasoning": "<1-2 sentences>", '
+        '"instruction": "<concrete instruction — name the specific fact, document, or provision>", '
+        '"criterion_hit": "<criterion name or empty string>"}'
     )
     data = llm.generate_json(prompt, system=system, role="director", temperature=0.7)
     if not isinstance(data, dict) or "instruction" not in data:
@@ -273,10 +277,28 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
     if refs:
         ai["live_legal_lookup"] = lookup_legal_references(refs, case.get("title", ""))
     state = concession.ensure(session.setdefault("concession_state", concession.init_state()))
+
+    merit_level, merit_criterion = concession.check_and_consume_merit_concession(state)
     plan = concession.plan_turn(state, student_message)
 
+    if merit_level == "minor":
+        plan["directive"] += (
+            f" MERIT CONCESSION (small): The student has demonstrated '{merit_criterion}' "
+            f"strongly for {concession.MERIT_STREAK_MINOR} consecutive turns. "
+            f"Make a genuine small concession — acknowledge their point and yield on "
+            f"one minor item. Frame it as earned respect, not weakness."
+        )
+    elif merit_level == "major":
+        plan["directive"] += (
+            f" MERIT CONCESSION (significant): The student has demonstrated "
+            f"'{merit_criterion}' at a high level for {concession.MERIT_STREAK_MAJOR} "
+            f"consecutive turns. You MUST make a significant concession — yield "
+            f"meaningfully on one of your core objectives and acknowledge the strength "
+            f"of their position explicitly."
+        )
+
     if FAST_MODE:
-        directive = {"tactic": plan["phase"], "reasoning": "Concession-rule driven (fast mode).", "instruction": plan["directive"], "phase": plan["phase"]}
+        directive = {"tactic": plan["phase"], "reasoning": "Concession-rule driven (fast mode).", "instruction": plan["directive"], "phase": plan["phase"], "criterion_hit": ""}
         chosen = adversary_single(ai, session, student_message, plan)
         candidates = [chosen]
         selection = {"choice": 0, "chosen": chosen, "why": "fast mode", "forecasts": []}
@@ -286,6 +308,7 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
         selection = predictor_select(ai, session, candidates, directive)
         chosen = selection["chosen"]
 
+    concession.update_criterion_streak(state, directive.get("criterion_hit", ""))
     note = notetaker_record(ai, session, student_message, chosen)
 
     turn_n = plan["turn_number"]

@@ -64,6 +64,7 @@ def _cfg(temperature: float):
 class Directive(BaseModel):
     tactic: str
     instruction: str
+    criterion_hit: str = ""  # which of the 6 criteria the student demonstrated strongly, or ""
 
 
 class Candidates(BaseModel):
@@ -104,7 +105,12 @@ director = LlmAgent(
         "IMPORTANT: At least every other turn must use a FACT-BASED tactic. "
         "Pure emotional pressure without factual grounding is weak advocacy. "
         "When giving the instruction, name the specific fact, document, clause, or "
-        "legal provision the negotiator should reference."
+        "legal provision the negotiator should reference.\n\n"
+        f"ALSO assess the student's latest message against these 6 criteria:\n"
+        f"{concession.criteria_list_for_prompt()}\n"
+        "Set criterion_hit to the SHORT criterion name (e.g. 'Case preparation') if "
+        "the student clearly demonstrated it strongly this turn. Leave it empty (\"\") "
+        "if their argument was weak, vague, or didn't clearly fit any criterion."
     ),
 )
 
@@ -253,14 +259,37 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
     if refs:
         ai["live_legal_lookup"] = lookup_legal_references(refs, case.get("title", ""))
     cstate = concession.ensure(session.setdefault("concession_state", concession.init_state()))
+
+    # Check if a merit concession was earned by the previous two turns
+    merit_level, merit_criterion = concession.check_and_consume_merit_concession(cstate)
+
     plan = concession.plan_turn(cstate, student_message)
+
+    hard_rules = plan["directive"]
+    if merit_level == "minor":
+        hard_rules += (
+            f" MERIT CONCESSION (small): The student has demonstrated '{merit_criterion}' "
+            f"strongly for {concession.MERIT_STREAK_MINOR} consecutive turns. "
+            f"Make a genuine small concession this turn — acknowledge their point and "
+            f"yield on one minor item. Frame it as earned respect, not weakness."
+        )
+    elif merit_level == "major":
+        hard_rules += (
+            f" MERIT CONCESSION (significant): The student has demonstrated "
+            f"'{merit_criterion}' at a high level for {concession.MERIT_STREAK_MAJOR} "
+            f"consecutive turns. This is exceptional advocacy. You MUST make a "
+            f"significant concession — yield meaningfully on one of your core objectives, "
+            f"acknowledge the strength of their position explicitly, and signal genuine "
+            f"movement toward agreement. This is not weakness; it is a reasoned response "
+            f"to sustained, high-quality argument."
+        )
 
     seed = {
         "ai_side": ai["side"],
         "ai_packet": _render_packet(ai),
         "transcript": _render_transcript(session),
         "ai_notes": _render_memory(session),
-        "hard_rules": plan["directive"],
+        "hard_rules": hard_rules,
         "student_message": student_message,
         "personality_style": personalities.get_style(session.get("personality", "default")),
         "player_tendencies": _pm.digest() or "(none recorded yet — observe and note)",
@@ -271,6 +300,10 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
     if not isinstance(directive, dict):
         directive = {"tactic": plan["phase"], "instruction": plan["directive"]}
     directive["phase"] = plan["phase"]
+
+    # Update criterion streak based on what the Director assessed this turn
+    criterion_hit = directive.get("criterion_hit", "") if isinstance(directive, dict) else ""
+    concession.update_criterion_streak(cstate, criterion_hit)
 
     cand_obj = final_state.get("cand") or {}
     candidates = cand_obj.get("candidates") if isinstance(cand_obj, dict) else None
