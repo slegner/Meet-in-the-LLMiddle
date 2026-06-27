@@ -160,6 +160,25 @@ def get_session(sid: str):
         raise HTTPException(404, "Session not found")
 
 
+@app.delete("/sessions/{sid}/turns/last")
+def undo_last_turn(sid: str):
+    try:
+        session = store.load_session(sid)
+    except FileNotFoundError:
+        raise HTTPException(404, "Session not found")
+    if session.get("status") == "ended":
+        raise HTTPException(400, "Cannot undo a completed session")
+    turns = session.get("turns", [])
+    if not turns:
+        raise HTTPException(400, "No turns to undo")
+    session["turns"] = turns[:-1]
+    # Roll back ai_memory and concession state by one turn if possible
+    if session.get("ai_memory"):
+        session["ai_memory"] = session["ai_memory"][:-1]
+    store.save_session(session)
+    return {"turns": len(session["turns"])}
+
+
 @app.get("/sessions/{sid}/casefile")
 def get_casefile(sid: str):
     try:

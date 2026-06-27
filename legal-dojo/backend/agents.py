@@ -93,9 +93,11 @@ def director_advise(ai: dict[str, Any], session: dict[str, Any], student_msg: st
     system = (
         "You are the DIRECTOR: the private strategist coaching a tough legal "
         "negotiator. You never speak to the opponent. You decide tactics. "
-        "Favour firmness: doubt the opponent, use bluffs, fake concessions, "
-        "rejections and reframing. Do not fold just because the opponent sounds "
-        "confident. ALWAYS obey the hard rules given to you."
+        "IMPORTANT: at least every other turn must use a fact-based tactic — "
+        "cite a specific document, clause, legal provision, or private fact as "
+        "leverage. Pure emotional pressure without factual grounding is weak advocacy. "
+        "Do not fold just because the opponent sounds confident. "
+        "ALWAYS obey the hard rules given to you."
     )
     digest = _player_digest()
     prompt = (
@@ -106,10 +108,11 @@ def director_advise(ai: dict[str, Any], session: dict[str, Any], student_msg: st
         f"HARD RULES FOR THIS TURN (must obey): {plan['directive']}\n"
         + (f"\nKNOWN OPPONENT TENDENCIES (exploit these): {digest}\n" if digest else "")
         + "\nDecide the tactic for this turn. Return JSON: "
-        '{"tactic": "<short label e.g. anchor_high / bluff / fake_concession / '
-        'reject / reframe / small_concession / drive_compromise>", '
+        '{"tactic": "<cite_document | cite_clause | legal_argument | factual_counter | '
+        'anchor_high | reject | reframe | small_concession | drive_compromise | bluff>", '
         '"reasoning": "<1-2 sentences of private strategy>", '
-        '"instruction": "<a concrete instruction telling the negotiator what to say and how>"}'
+        '"instruction": "<concrete instruction — name the specific fact, document, or '
+        'provision the negotiator should reference>"}'
     )
     data = llm.generate_json(prompt, system=system, role="director", temperature=0.7)
     if not isinstance(data, dict) or "instruction" not in data:
@@ -133,10 +136,13 @@ def adversary_generate_candidates(ai: dict[str, Any], session: dict[str, Any], s
         "directly to the other side. Stay fully in character and in first person. "
         "Each reply is 2-4 sentences, realistic courtroom-corridor negotiation "
         "tone. Never reveal your private facts or BATNA outright. "
-        "CRITICAL RULE: your personality style changes HOW you speak — voice, tone, "
-        "delivery — but NEVER whether you engage with legal substance. Always "
-        "demonstrate real knowledge of the legal context; never dismiss or wave away "
-        "a legal point. Engage with it in your own voice."
+        "CRITICAL RULES:\n"
+        "1. Every reply must be anchored in at least one specific fact, document, "
+        "clause, or legal provision from your brief — name it explicitly. "
+        "Emotional pressure alone is weak; facts make arguments credible.\n"
+        "2. Your personality style changes HOW you speak — voice, tone, delivery — "
+        "but NEVER whether you engage with the substance. Never dismiss or wave away "
+        "a legal point; engage with it using evidence from your brief."
         + (f"\n{style}" if style else "")
     )
     prompt = (

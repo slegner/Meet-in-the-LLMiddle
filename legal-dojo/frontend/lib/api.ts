@@ -80,6 +80,12 @@ export interface DealAssessment {
   comments: string;
 }
 
+export interface WeakSpotAnalysis {
+  persistent: string[];   // recurring across multiple sessions
+  new: string[];          // appeared for the first time this session
+  improved: string[];     // historical spots not triggered this session
+}
+
 export interface Report {
   case_title: string;
   side: Side;
@@ -93,6 +99,7 @@ export interface Report {
   perception: EvalBlock;
   criteria?: CriterionResult[];
   weak_spots: string[];
+  weak_spot_analysis?: WeakSpotAnalysis;
 }
 
 export interface Observation {
@@ -151,6 +158,8 @@ export const postChat = (sid: string, message: string, interrupt_count = 0) =>
   send<ChatResponse>("POST", `/sessions/${sid}/chat`, { message, interrupt_count });
 export const endSession = (sid: string, accepted = false) =>
   send<Report>("POST", `/sessions/${sid}/end`, { accepted });
+export const undoLastTurn = (sid: string) =>
+  send<{ turns: number }>("DELETE", `/sessions/${sid}/turns/last`);
 export const nudgeSession = (sid: string) =>
   send<ChatResponse>("POST", `/sessions/${sid}/nudge`);
 export const getReport = (sid: string) => getJSON<Report>(`/sessions/${sid}/report`);

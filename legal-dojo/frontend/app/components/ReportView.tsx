@@ -1,6 +1,6 @@
 "use client";
 
-import { type CriterionResult, type Report, reportPdfUrl } from "@/lib/api";
+import { type CriterionResult, type Report, type WeakSpotAnalysis, reportPdfUrl } from "@/lib/api";
 
 const SCORE_STYLE: Record<CriterionResult["score"], { label: string; color: string; bg: string }> = {
   strong:   { label: "✓ Strong",   color: "#0a2010", bg: "var(--good)" },
@@ -26,6 +26,56 @@ const VERDICT_STYLE: Record<string, { label: string; color: string; bg: string }
   at_batna:    { label: "At BATNA — acceptable outcome", color: "#2a1f05", bg: "var(--accent)" },
   below_batna: { label: "Below BATNA — you should have walked away", color: "#2a0a0a", bg: "var(--danger)" },
 };
+
+function WeakSpotSection({ spots, analysis }: { spots: string[]; analysis?: WeakSpotAnalysis }) {
+  const persistent = new Set(analysis?.persistent ?? []);
+  const improved = analysis?.improved ?? [];
+  const hasHistory = persistent.size > 0 || improved.length > 0;
+
+  return (
+    <div className="eval">
+      <h3>Weak Spots to Work On</h3>
+      {spots.length === 0 && !hasHistory && <p className="muted">None flagged.</p>}
+
+      {spots.map((w, i) => {
+        const isRecurring = persistent.has(w);
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+            <div className="weak" style={{ flex: 1, margin: 0 }}>{w}</div>
+            {isRecurring && (
+              <span style={{
+                background: "var(--danger)",
+                color: "#2a0a0a",
+                borderRadius: 5,
+                padding: "2px 8px",
+                fontSize: 11,
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                alignSelf: "center",
+              }}>
+                Recurring
+              </span>
+            )}
+          </div>
+        );
+      })}
+
+      {improved.length > 0 && (
+        <div style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: "var(--good)", marginBottom: 6 }}>
+            Signs of improvement this session
+          </div>
+          {improved.map((w, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+              <span style={{ color: "var(--good)", fontSize: 14, lineHeight: 1 }}>✓</span>
+              <span style={{ fontSize: 14, color: "var(--muted)" }}>{w}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ReportView({ sid, report }: { sid: string; report: Report }) {
   const verdict = report.deal ? VERDICT_STYLE[report.deal.verdict] ?? VERDICT_STYLE.at_batna : null;
@@ -103,13 +153,7 @@ export default function ReportView({ sid, report }: { sid: string; report: Repor
         </div>
       )}
 
-      <div className="eval">
-        <h3>Weak Spots to Work On</h3>
-        {report.weak_spots.length === 0 && <p className="muted">None flagged.</p>}
-        {report.weak_spots.map((w, i) => (
-          <div className="weak" key={i}>{w}</div>
-        ))}
-      </div>
+      <WeakSpotSection spots={report.weak_spots} analysis={report.weak_spot_analysis} />
 
       <a className="btn" href={reportPdfUrl(sid)} target="_blank" rel="noreferrer">
         ⬇ Download report (PDF)

@@ -1,0 +1,59 @@
+{
+  "id": "the_great_flatmate_break_up_agreement",
+  "title": "The Great Flatmate Break-Up Agreement",
+  "summary": "Flatmates are negotiating the terms of one flatmate's departure, including shared property, financial obligations, and future interactions.",
+  "background": "Dave, one of the flatmates, has decided to leave the shared accommodation. This decision has led to numerous discussions, arguments, and passive-aggressive notes, culminating in a 'legally binding' (in spirit, not law) agreement. The departure date is tentatively set for the end of October, with possibilities for an earlier exit if Dave meets certain conditions like packing and securing new housing.",
+  "relevant_law": [
+    "Tenancy Agreement (implied or explicit terms regarding shared property and responsibilities)",
+    "Contract Law (regarding the 'legally binding' nature of their agreement, though likely unenforceable in court)"
+  ],
+  "legal_context": "A strong real-world analogue for **“The Great Flatmate Break-Up Agreement”** is a **roommate/co-tenant dispute over an early move-out and unpaid rent**, because the law usually treats the roommate agreement as a private contract between co-tenants while the landlord-tenant lease still governs the actual tenancy obligations to the landlord.[3][7] In practice, the departing roommate’s promise to “pay my share” can be enforceable as a contract between roommates, but it does **not** change the landlord’s right to demand full rent from all lease signers if the lease makes them jointly and severally liable.[3][4]\n\n**Best-fit legal frame for a training scenario:** a dispute where two or more tenants signed one lease, created a separate written roommate agreement (or an oral promise) about rent, chores, and an early exit, and then one roommate left and stopped paying. That setup closely matches the legal issues described in mainstream tenant guidance on co-tenants, roommate agreements, and rent liability.[3][7][8]\n\n## 1) Parties involved\n\nBecause you asked for a real case or dispute, the sources here describe the *type* of parties rather than a single famous reported appellate case. The most concrete fact pattern is:\n\n- **Landlord/property manager**: the entity holding the lease and demanding the full rent under the lease terms.[3][4]\n- **Roommate A / remaining tenant**: the tenant who stays, keeps paying to avoid default/eviction, and later seeks reimbursement from the departing roommate.[3][4]\n- **Roommate B / departing tenant**: the tenant who wants to break the arrangement, move out early, and minimize further liability.[7][8]\n\nIf you want a real organizational context, the parties are usually:\n- a private residential landlord or management company,\n- two co-tenants on a single lease,\n- and sometimes a small-claims court if the paying roommate sues the departing roommate for breach of their roommate agreement or oral promise.[3][4][7]\n\n## 2) Background and key facts\n\nThe standard dispute looks like this:\n\n- Two roommates sign the same lease for an apartment.\n- They also make an **explicit roommate agreement** about how rent, utilities, deposits, and move-out will work, or they rely on an **implied understanding** that each will pay half.[7]\n- One roommate wants to leave early, stop paying, or find a replacement roommate.\n- The remaining roommate either cannot or does not want to cover the full rent alone and risks late fees or eviction if the landlord is not paid in full.[3][4]\n- The landlord is generally indifferent to the internal split and demands the total rent from the lease signers.[3][4]\n\nThis pattern is exactly why roommate guides recommend putting the rules in writing and addressing rent, utilities, deposits, and early termination up front.[6][7]\n\n## 3) What each party wants and why\n\n| Party | Main wants | Why it matters |\n|---|---|---|\n| **Departing roommate** | Exit the tenancy early, stop future payments, avoid deposit loss or lawsuit exposure | Wants to move for a job, relationship, finances, or housing change; wants to cap liability.[7][8] |\n| **Remaining roommate** | Keep the apartment, force contribution to rent, recover amounts already covered, avoid eviction | Wants housing stability and reimbursement for money paid on behalf of the other roommate.[3][4] |\n| **Landlord** | Full rent on time, minimal disruption, compliance with lease | Usually does not care how roommates split costs internally, only that the lease is paid in full.[3][4] |\n\n## 4) Legal issues, statutes, regulations, and case law\n\n### Tenancy agreement: implied or explicit terms on shared property and responsibilities\n\nA roommate arrangement usually sits on top of the main lease. A written roommate agreement can set out rent, utilities, move-out dates, deposit handling, and early termination rules.[7] If the agreement is informal, courts may still infer an **implied agreement** from the parties’ course of conduct, such as one person regularly paying half the rent or both discussing a split.[7][8]\n\nKey legal point: **as between the roommates**, their private agreement can allocate responsibilities; **as between the tenants and landlord**, the lease controls. A breach of the roommate agreement does not alter the landlord’s rights under the lease.[3]\n\nCommon obligations/procedures in roommate agreements include:\n- rent due dates and payment method,\n- utilities allocation,\n- early termination steps,\n- notice requirements,\n- deposit return timing,\n- and consequences for one roommate’s financial default.[7]\n\n### Contract law: whether the roommate agreement is “legally binding”\n\nA roommate agreement is described by tenant/legal guidance as a **contract between people who share a rental property**.[7] That means the usual contract elements matter:\n- offer,\n- acceptance,\n- consideration,\n- and intent to create legal relations.\n\nIn practice, a roommate agreement can be enforceable in small claims court if it is sufficiently definite and su",
+  "shared_documents": [
+    {
+      "name": "The Great Flatmate Break-Up Agreement",
+      "summary": "A multi-article document outlining the terms of Dave's departure, including leaving dates, rules while still present, furniture division, and future relationship. It is acknowledged to be more of a social contract than a legally enforceable one."
+    }
+  ],
+  "sources": [],
+  "sides": {
+    "dave": {
+      "role": "You are Dave, the flatmate who is leaving. You're generally a reasonable person but feel increasingly frustrated by the nitpicking and passive-aggression from your flatmates. You want to get out smoothly and with as little drama as possible, but you're also not going to be pushed around. You tend to be direct but can become defensive if you feel unfairly targeted.",
+      "goal": "To finalize your departure by October 31st, taking the air fryer and the good frying pan, while paying no more than one additional month of Wi-Fi after you leave.",
+      "batna": "You will leave the flat by October 15th, taking the air fryer and the good frying pan, and stop paying for Wi-Fi immediately. This will likely sour relationships permanently, but you will be free.",
+      "objectives": [
+        "Secure the air fryer and the good frying pan as your personal property.",
+        "Ensure your financial obligations, especially Wi-Fi, cease no later than one month after your departure.",
+        "Depart the flat by October 31st, or earlier if mutually agreed.",
+        "Avoid any further arguments or conflict during the transition period.",
+        "Maintain a civil, if not friendly, relationship with your former flatmates."
+      ],
+      "private_facts": [
+        "You secretly want to take the good frying pan because you bought it, but don't want to cause more conflict.",
+        "You have already found a new place and can move in by October 15th, but are delaying announcing it to avoid immediate pressure to move.",
+        "You are willing to pay for an extra month of Wi-Fi if it means avoiding a fight over the air fryer and frying pan.",
+        "You have a box of your personal items already packed and ready to go, which includes some of the 'shared' extension leads you bought."
+      ]
+    },
+    "remaining_flatmates": {
+      "role": "You are the remaining flatmates, represented by one spokesperson. You feel Dave is being unreasonable and entitled, trying to walk away from responsibilities and take shared items. You want to ensure a fair resolution for the flat and maintain a peaceful environment. You are united in your stance and can be quite firm, often using group consensus to back your demands.",
+      "goal": "To ensure Dave leaves the sofa and all extension leads, pays for Wi-Fi until November 30th, and fully cleans his room before departure, with no further contact after he leaves.",
+      "batna": "Dave leaves by October 31st, but you retain all disputed items (sofa, air fryer, frying pan, extension leads) and establish clear boundaries for no further interaction, even if it means a messy departure.",
+      "objectives": [
+        "Ensure the sofa remains in the flat.",
+        "Dave pays for Wi-Fi until the end of November.",
+        "All shared extension leads remain in the flat.",
+        "Dave thoroughly cleans his room and common areas he used before leaving.",
+        "Establish clear boundaries for future interactions, preferably none."
+      ],
+      "private_facts": [
+        "The remaining flatmates are already discussing who will replace Dave and are eager for him to leave.",
+        "They secretly don't care about the sofa as much as they pretend, but are using it as leverage for other issues.",
+        "They have already found a potential replacement flatmate who can move in by November 1st.",
+        "They are particularly annoyed about Dave's past failures to clean the bathroom properly.",
+        "Tactic: They may threaten to withhold Dave's security deposit for 'damages' if he doesn't comply with their demands, even if the damages are minor or non-existent.",
+        "Red line: They will never accept Dave taking the sofa or refusing to pay for any Wi-Fi after his departure.",
+        "Style: They will start with a calm, reasonable tone, but will quickly escalate to firm, united demands backed by the 'group' if their initial points are not met. They may use passive-aggressive language or bring up past grievances if frustrated."
+      ]
+    }
+  }
+}

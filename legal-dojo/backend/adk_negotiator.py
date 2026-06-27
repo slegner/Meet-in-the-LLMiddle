@@ -93,11 +93,18 @@ director = LlmAgent(
         "Your private notes so far:\n{ai_notes}\n"
         "The opponent just said:\n{student_message}\n"
         "Hard rules you MUST obey this turn: {hard_rules}\n"
-        "Decide the single best tactic (such as anchor_high, bluff, fake_concession, "
-        "reject, reframe, small_concession, drive_compromise) and give a concrete "
-        "instruction for what the negotiator should say. Default to toughness and "
-        "pressure: never fold just because the opponent sounds confident, and never "
-        "let them be pleasant or accommodating unless the hard rules force a concession."
+        "KNOWN OPPONENT WEAKNESSES (exploit these aggressively — do not announce "
+        "them, just engineer situations that trigger them): {player_tendencies}\n"
+        "Decide the single best tactic from this list and give a concrete instruction:\n"
+        "  FACT-BASED (prefer these): cite_document, cite_clause, factual_counter, "
+        "cite_private_fact (use a private fact as leverage without revealing it fully), "
+        "legal_argument (cite a specific law or provision from the legal context)\n"
+        "  POSITIONAL: anchor_high, reject, small_concession, drive_compromise\n"
+        "  PRESSURE: reframe, exploit_weakness, bluff, fake_concession\n"
+        "IMPORTANT: At least every other turn must use a FACT-BASED tactic. "
+        "Pure emotional pressure without factual grounding is weak advocacy. "
+        "When giving the instruction, name the specific fact, document, clause, or "
+        "legal provision the negotiator should reference."
     ),
 )
 
@@ -114,11 +121,14 @@ adversary = LlmAgent(
         "and you are NOT here to be friendly, accommodating, or to settle quickly. "
         "Challenge their claims, push back hard, and never sound eager to agree. "
         "Skip pleasantries.\n"
-        "CRITICAL RULE: Your personality style below changes HOW you speak — the "
-        "voice, tone, and delivery — but NEVER whether you engage with the legal "
-        "substance. You must always demonstrate real knowledge of the legal context "
-        "and documents in your brief. Never dismiss or wave away a legal point; "
-        "engage with it in your own voice.\n"
+        "CRITICAL RULES:\n"
+        "1. Every reply must be anchored in at least one specific fact, document, "
+        "clause, or legal provision from your brief. Name it explicitly. "
+        "Emotional pressure alone — insults, vague threats, bluster — is weak; "
+        "facts make arguments credible and training valuable.\n"
+        "2. Your personality style changes HOW you speak — voice, tone, delivery — "
+        "but NEVER whether you engage with the substance. Never dismiss or wave away "
+        "a legal point; engage with it using the evidence in your brief.\n"
         "{personality_style}\n"
         "Your brief:\n{ai_packet}\n"
         "Conversation so far:\n{transcript}\n"
@@ -237,6 +247,7 @@ async def _run(state: dict[str, Any], student_message: str) -> tuple[dict[str, A
 def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str) -> dict[str, Any]:
     """ADK pipeline for one turn. Mutates `session`, returns the new turn dict."""
     from case_search import extract_legal_references, lookup_legal_references
+    import player_memory as _pm
     ai = store.ai_packet(case, session["side"])
     refs = extract_legal_references(student_message)
     if refs:
@@ -252,6 +263,7 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
         "hard_rules": plan["directive"],
         "student_message": student_message,
         "personality_style": personalities.get_style(session.get("personality", "default")),
+        "player_tendencies": _pm.digest() or "(none recorded yet — observe and note)",
     }
     final_state, tokens = asyncio.run(_run(seed, student_message))
 

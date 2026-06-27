@@ -93,26 +93,47 @@ export default function StartPage() {
       <p className="subtitle">Read the case file, choose your side, and negotiate against the AI.</p>
 
       {cases.length > 1 && (
-        <select
-          style={{
-            marginBottom: 20,
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--panel)",
-            color: "var(--fg)",
-            fontSize: 14,
-          }}
-          value={detail.id}
-          onChange={(e) => {
-            const found = cases.find((c) => c.id === e.target.value);
-            if (found) { getCase(found.id).then(setDetail); setSide(null); }
-          }}
-        >
-          {cases.map((c) => (
-            <option key={c.id} value={c.id}>{c.title}</option>
-          ))}
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 16, fontWeight: 900, padding: "6px 16px" }}
+            onClick={() => {
+              const idx = cases.findIndex((c) => c.id === detail.id);
+              const prev = cases[(idx - 1 + cases.length) % cases.length];
+              getCase(prev.id).then(setDetail); setSide(null);
+            }}
+          >← Prev</button>
+          <select
+            style={{
+              flex: 1,
+              minWidth: 160,
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid var(--border)",
+              background: "var(--panel)",
+              color: "var(--fg)",
+              fontSize: 14,
+            }}
+            value={detail.id}
+            onChange={(e) => {
+              const found = cases.find((c) => c.id === e.target.value);
+              if (found) { getCase(found.id).then(setDetail); setSide(null); }
+            }}
+          >
+            {cases.map((c) => (
+              <option key={c.id} value={c.id}>{c.title}</option>
+            ))}
+          </select>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 16, fontWeight: 900, padding: "6px 16px" }}
+            onClick={() => {
+              const idx = cases.findIndex((c) => c.id === detail.id);
+              const next = cases[(idx + 1) % cases.length];
+              getCase(next.id).then(setDetail); setSide(null);
+            }}
+          >Next →</button>
+        </div>
       )}
 
       <section className="paper">

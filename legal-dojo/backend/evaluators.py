@@ -295,11 +295,68 @@ def evaluate_deal(case: dict[str, Any], session: dict[str, Any]) -> dict[str, An
 
 
 # ---------------------------------------------------------------------------
+# Weak-spot persistence analysis
+# ---------------------------------------------------------------------------
+
+def analyse_weak_spots(current_spots: list[str], profile: dict[str, Any]) -> dict[str, Any]:
+    """Classify current session weak spots against the historical player profile.
+
+    Returns:
+        persistent: spots that appeared before (recurring issues)
+        new:        spots seen for the first time this session
+        improved:   historical spots NOT triggered this session (possible progress)
+    """
+    observations = profile.get("observations", [])
+    if not observations and not current_spots:
+        return {"persistent": [], "new": [], "improved": []}
+    if not observations:
+        return {"persistent": [], "new": current_spots, "improved": []}
+    if not current_spots:
+        return {"persistent": [], "new": [], "improved": [o["text"] for o in observations]}
+
+    obs_texts = [o["text"] for o in observations]
+    system = "You are an analyst comparing negotiation coaching reports across sessions."
+    prompt = (
+        "HISTORICAL weak spots (from previous sessions, may be paraphrased differently):\n"
+        + "\n".join(f"  [{i}] {t}" for i, t in enumerate(obs_texts))
+        + "\n\nCURRENT session weak spots:\n"
+        + "\n".join(f"  - {s}" for s in current_spots)
+        + "\n\nFor each CURRENT spot, decide if it describes the same underlying weakness "
+        "as one of the historical spots (even if worded differently). "
+        "Then list which historical spots were NOT matched by any current spot "
+        "(possible signs of improvement). "
+        'Return JSON: {"persistent": [{"text": "...", "history_index": <int>}], '
+        '"new": ["..."], "improved_indices": [<int>]}'
+    )
+    data = llm.generate_json(prompt, system=system, role="evaluator", temperature=0.2, fallback={})
+    if not isinstance(data, dict):
+        return {"persistent": [], "new": current_spots, "improved": []}
+
+    persistent = []
+    for p in data.get("persistent") or []:
+        text = str(p.get("text", "")).strip()
+        if text:
+            persistent.append(text)
+
+    new = [str(s).strip() for s in (data.get("new") or []) if str(s).strip()]
+
+    improved = []
+    for idx in data.get("improved_indices") or []:
+        if isinstance(idx, int) and 0 <= idx < len(obs_texts):
+            improved.append(obs_texts[idx])
+
+    return {"persistent": persistent, "new": new, "improved": improved}
+
+
+# ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
 
 def compose_report(case: dict[str, Any], session: dict[str, Any],
                    accepted: bool = False) -> dict[str, Any]:
+    import player_memory as _pm
+    profile = _pm.load_profile()
+
     briefs = split_material(case, session)
     legal = evaluate_legal(case, session, briefs["legal"])
     negotiation = evaluate_negotiation(case, session, briefs["negotiation"])
@@ -308,7 +365,8 @@ def compose_report(case: dict[str, Any], session: dict[str, Any],
     deal = evaluate_deal(case, session) if accepted else None
 
     all_weak = legal["weak_spots"] + negotiation["weak_spots"] + perception["weak_spots"]
-    summary = _summarize(case, session, legal, negotiation, perception, deal)
+    weak_spot_analysis = analyse_weak_spots(all_weak, profile)
+    summary = _summarize(case, session, legal, negotiation, perception, deal, weak_spot_analysis)
 
     return {
         "case_title": case["title"],
@@ -323,21 +381,33 @@ def compose_report(case: dict[str, Any], session: dict[str, Any],
         "perception": perception,
         "criteria": criteria,
         "weak_spots": all_weak,
+        "weak_spot_analysis": weak_spot_analysis,
     }
 
 
-def _summarize(case, session, legal, negotiation, perception, deal=None) -> str:
+def _summarize(case, session, legal, negotiation, perception, deal=None, wsa=None) -> str:
     deal_line = ""
     if deal:
         deal_line = f"The student accepted a deal ({deal['verdict'].replace('_', ' ')}): {deal['deal_terms']}\n"
+    persistent_line = ""
+    if wsa and wsa.get("persistent"):
+        spots = "; ".join(wsa["persistent"])
+        persistent_line = f"Recurring issues (appeared in previous sessions too): {spots}\n"
+    improved_line = ""
+    if wsa and wsa.get("improved"):
+        spots = "; ".join(wsa["improved"])
+        improved_line = f"Possible signs of improvement (not triggered this session): {spots}\n"
     prompt = (
         f"Case: {case['title']}. The student played {session['side']}.\n"
         f"{deal_line}"
         f"Legal feedback: {legal['comments']}\n"
         f"Negotiation feedback: {negotiation['comments']}\n"
-        f"How the opponent perceived them: {perception['comments']}\n\n"
-        "Write a single warm, candid coaching paragraph (3-4 sentences) "
-        "summarising how the student did and the one thing to work on next."
+        f"How the opponent perceived them: {perception['comments']}\n"
+        f"{persistent_line}{improved_line}\n"
+        "Write a single warm, candid coaching paragraph (3-4 sentences). "
+        "If there are recurring issues, call them out directly — these need priority attention. "
+        "If something improved compared to previous sessions, acknowledge it. "
+        "End with the single most important thing to work on next."
     )
     out = llm.llm_generate(prompt, role="evaluator", temperature=0.6)
     return (out or "").strip() or "The negotiation has concluded."

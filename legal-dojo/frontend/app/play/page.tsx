@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { postChat, endSession, nudgeSession, getSession, getCaseFile, getProfile, ttsUrl, transcribeAudio, type Report, type CaseFile } from "@/lib/api";
+import { postChat, endSession, nudgeSession, getSession, getCaseFile, getProfile, ttsUrl, transcribeAudio, undoLastTurn, type Report, type CaseFile } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
 import HistoryOverlay from "../components/HistoryOverlay";
@@ -477,6 +477,18 @@ function Scene() {
     await sendMessage(text);
   }
 
+  async function undo() {
+    if (sending || ended || turns < 1) return;
+    try {
+      await undoLastTurn(sid);
+      // Remove the last ai + player message pair from the local display
+      setMessages((m) => m.slice(0, -2));
+      setTurns((t) => t - 1);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Undo failed");
+    }
+  }
+
   async function end(accepted = false) {
     setEnding(true);
     try {
@@ -640,9 +652,15 @@ function Scene() {
                       title={voiceMode ? "Exit voice mode" : "Enter voice mode"}
                       style={voiceMode ? { background: recording ? "#c0392b" : "#8b0000", color: "#fff", borderColor: recording ? "#c0392b" : "#8b0000" } : undefined}
                     >
-                      {transcribing ? "…" : voiceMode ? (recording ? "🎙 Listening…" : "🔴 Voice") : "🎤"}
+                      {transcribing ? "…" : voiceMode ? (recording ? <><span style={{ fontSize: 20 }}>🎙</span> Listening…</> : <><span style={{ fontSize: 20 }}>🔴</span> Voice</>) : <span style={{ fontSize: 20 }}>🎤</span>}
                     </button>
                     <button className="btn" onClick={send} disabled={sending || !input.trim()}>Send</button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={undo}
+                      disabled={sending || ended || turns < 1}
+                      title="Remove your last message and the AI's reply"
+                    >↩ Undo</button>
                   </div>
                 )}
               </div>

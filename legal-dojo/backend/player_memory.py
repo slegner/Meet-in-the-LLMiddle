@@ -26,8 +26,8 @@ _DEFAULT: dict[str, Any] = {
     "updated_at": None,
 }
 
-MAX_OBSERVATIONS = 30
-EVICT_AFTER = 3  # sessions without the weak spot re-appearing → auto-remove
+MAX_OBSERVATIONS = 12
+EVICT_AFTER = 2  # sessions without the weak spot re-appearing → auto-remove
 
 
 def _coerce_obs(raw: list) -> list[dict]:
@@ -86,15 +86,67 @@ def _fuzzy_match(a: str, b: str) -> bool:
     return a in b or b in a
 
 
+def _llm_match_spots(new_spots: list[str], existing: list[dict]) -> tuple[dict[int, str], list[str]]:
+    """Use the LLM to find which new weak spots are semantically the same as existing ones.
+
+    Returns:
+        matched: {existing_index: new_spot_text}  — existing obs that this session confirmed
+        unmatched: [new_spot_text]                 — genuinely new issues
+    """
+    if not new_spots or not existing:
+        return {}, new_spots
+
+    try:
+        import llm as _llm
+        existing_lines = "\n".join(f"  [{i}] {o['text']}" for i, o in enumerate(existing))
+        new_lines = "\n".join(f"  - {s}" for s in new_spots)
+        prompt = (
+            "EXISTING tracked weak spots:\n" + existing_lines +
+            "\n\nNEW weak spots from latest session:\n" + new_lines +
+            "\n\nFor each new spot, decide if it describes the same underlying weakness "
+            "as one of the existing spots (even if worded differently). "
+            'Return JSON: {"matches": [{"new": "exact new text", "existing_index": <int or null>}]}'
+        )
+        data = _llm.generate_json(
+            prompt,
+            system="You are a deduplication assistant for a legal coaching system.",
+            role="evaluator",
+            temperature=0.1,
+            fallback={},
+        )
+        matched: dict[int, str] = {}
+        unmatched: list[str] = []
+        for m in (data.get("matches") if isinstance(data, dict) else []) or []:
+            text = str(m.get("new", "")).strip()
+            idx = m.get("existing_index")
+            if text and isinstance(idx, int) and 0 <= idx < len(existing):
+                matched[idx] = text
+            elif text:
+                unmatched.append(text)
+        return matched, unmatched
+    except Exception:
+        # Fallback: original substring matching
+        matched = {}
+        unmatched = []
+        for spot in new_spots:
+            found = False
+            for i, obs in enumerate(existing):
+                if _fuzzy_match(obs["text"], spot):
+                    matched[i] = spot
+                    found = True
+                    break
+            if not found:
+                unmatched.append(spot)
+        return matched, unmatched
+
+
 def update_from_session(session: dict[str, Any], report: dict[str, Any]) -> None:
     """Fold a finished session's weak spots into the persistent profile.
 
-    For each existing observation:
-    - If the current session produced a matching weak spot → reset its counter to 0
-      (the issue persists, keep tracking).
-    - Otherwise → increment the counter by 1.
-    Observations whose counter reaches EVICT_AFTER are dropped (issue resolved).
-    Brand-new weak spots are appended with counter 0.
+    Uses LLM-based semantic deduplication so the same underlying issue never
+    accumulates as multiple differently-worded entries. Matched observations are
+    refreshed (text updated to the clearer phrasing); unmatched new spots are
+    appended. Observations unseen for EVICT_AFTER consecutive sessions are dropped.
     """
     profile = load_profile()
     observations = _coerce_obs(profile.get("observations", []))
@@ -102,25 +154,29 @@ def update_from_session(session: dict[str, Any], report: dict[str, Any]) -> None
 
     new_spots = [str(w).strip() for w in report.get("weak_spots", []) if str(w).strip()]
 
-    # Age every existing observation, then reset those matched by a new spot.
-    matched_spots: set[str] = set()
-    for obs in observations:
-        matched = any(_fuzzy_match(obs["text"], spot) for spot in new_spots)
-        if matched:
-            obs["sessions_since_last_seen"] = 0
-            for spot in new_spots:
-                if _fuzzy_match(obs["text"], spot):
-                    matched_spots.add(spot)
-        else:
+    # LLM matches new spots to existing observations
+    matched, unmatched = _llm_match_spots(new_spots, observations)
+
+    # Update matched observations: reset counter, refresh text if clearer
+    for idx, new_text in matched.items():
+        obs = observations[idx]
+        obs["sessions_since_last_seen"] = 0
+        # Take the longer/more descriptive phrasing
+        if len(new_text) > len(obs["text"]):
+            obs["text"] = new_text
+
+    # Age unmatched existing observations
+    for i, obs in enumerate(observations):
+        if i not in matched:
             obs["sessions_since_last_seen"] = obs.get("sessions_since_last_seen", 0) + 1
 
-    # Drop stale observations that haven't reappeared in EVICT_AFTER sessions.
+    # Drop stale observations
     observations = [o for o in observations if o["sessions_since_last_seen"] < EVICT_AFTER]
 
-    # Append genuinely new weak spots.
+    # Append genuinely new weak spots (not a duplicate of anything remaining)
     existing_texts = {o["text"].lower() for o in observations}
-    for spot in new_spots:
-        if spot not in matched_spots and spot.lower() not in existing_texts:
+    for spot in unmatched:
+        if spot.lower() not in existing_texts:
             observations.append({"text": spot, "sessions_since_last_seen": 0, "added_at": now})
 
     observations = observations[-MAX_OBSERVATIONS:]
