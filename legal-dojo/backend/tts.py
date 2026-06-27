@@ -20,7 +20,8 @@ load_dotenv(Path(__file__).parent / ".env", override=True)
 
 TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "openai").lower()
 OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL", "tts-1")
-OPENAI_TTS_VOICE = os.environ.get("TTS_VOICE", "onyx")  # deep, lawyerly
+OPENAI_TTS_VOICE = os.environ.get("TTS_VOICE", "echo")  # younger male
+OPENAI_TTS_SPEED = float(os.environ.get("TTS_SPEED", "1.15"))  # 1.0 normal, up to 4.0
 GEMINI_TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-2.5-flash-preview-tts")
 
 
@@ -47,6 +48,7 @@ async def _openai_stream(text: str) -> AsyncIterator[bytes]:
         "voice": OPENAI_TTS_VOICE,
         "input": text,
         "response_format": "mp3",
+        "speed": OPENAI_TTS_SPEED,
     }
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     async with httpx.AsyncClient(timeout=60) as client:
