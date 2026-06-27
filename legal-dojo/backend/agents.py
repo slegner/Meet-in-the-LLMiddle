@@ -37,11 +37,22 @@ FAST_MODE = os.environ.get("LLM_FAST_MODE", "1") == "1"
 def _render_packet(ai: dict[str, Any]) -> str:
     facts = "\n".join(f"  - {f}" for f in ai.get("private_facts", []))
     objs = "\n".join(f"  - {o}" for o in ai.get("objectives", []))
+    legal = ""
+    if ai.get("legal_context"):
+        legal = f"\nLEGAL CONTEXT (use this to make legally accurate arguments):\n{ai['legal_context']}\n"
+    docs = ""
+    if ai.get("shared_documents"):
+        doc_lines = "\n".join(f"  - {d['name']}: {d['summary']}" for d in ai["shared_documents"])
+        docs = f"\nSHARED DOCUMENTS (both sides have these):\n{doc_lines}\n"
+    live = ""
+    if ai.get("live_legal_lookup"):
+        live = f"\nLIVE LOOKUP — opponent just cited these provisions (know them precisely):\n{ai['live_legal_lookup']}\n"
     return (
         f"YOU represent the {ai['side'].upper()} side in: {ai['title']}.\n"
         f"Role: {ai['role']}\n"
         f"Your goal: {ai['goal']}\n"
         f"Your BATNA (walk-away): {ai['batna']}\n"
+        f"{legal}{docs}{live}"
         f"Your PRIVATE facts (never reveal directly):\n{facts}\n"
         f"Your objectives:\n{objs}"
     )
@@ -121,7 +132,11 @@ def adversary_generate_candidates(ai: dict[str, Any], session: dict[str, Any], s
         "You are the ADVERSARY: a sharp, composed opposing negotiator speaking "
         "directly to the other side. Stay fully in character and in first person. "
         "Each reply is 2-4 sentences, realistic courtroom-corridor negotiation "
-        "tone. Never reveal your private facts or BATNA outright."
+        "tone. Never reveal your private facts or BATNA outright. "
+        "CRITICAL RULE: your personality style changes HOW you speak — voice, tone, "
+        "delivery — but NEVER whether you engage with legal substance. Always "
+        "demonstrate real knowledge of the legal context; never dismiss or wave away "
+        "a legal point. Engage with it in your own voice."
         + (f"\n{style}" if style else "")
     )
     prompt = (
@@ -246,7 +261,11 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
 
         return adk_negotiator.run_turn(case, session, student_message)
 
+    from case_search import extract_legal_references, lookup_legal_references
     ai = store.ai_packet(case, session["side"])
+    refs = extract_legal_references(student_message)
+    if refs:
+        ai["live_legal_lookup"] = lookup_legal_references(refs, case.get("title", ""))
     state = concession.ensure(session.setdefault("concession_state", concession.init_state()))
     plan = concession.plan_turn(state, student_message)
 

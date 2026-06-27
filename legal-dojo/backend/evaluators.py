@@ -26,6 +26,7 @@ import llm
 _CRITERIA = [
     {
         "short": "Position accuracy",
+        "title": "Pushing your position without overstating it",
         "full": (
             "Pushing your position without overstating it: advocating as forcefully "
             "as the facts and law actually support, while resisting the temptation to "
@@ -36,6 +37,7 @@ _CRITERIA = [
     },
     {
         "short": "Case preparation",
+        "title": "Knowing the facts and law and understanding the strengths and weaknesses of both your position and the other side's",
         "full": (
             "Knowing the facts and law and understanding the strengths and weaknesses "
             "of both your position and the other side's: knowing the documents, timeline, "
@@ -47,6 +49,7 @@ _CRITERIA = [
     },
     {
         "short": "Interest-based thinking",
+        "title": "Distinguishing stated positions from underlying interests",
         "full": (
             "Distinguishing stated positions from underlying interests: looking beyond "
             "what people say they want (positions) to understand why they want it "
@@ -58,6 +61,7 @@ _CRITERIA = [
     },
     {
         "short": "Concession discipline",
+        "title": "Knowing when to make the first offer, how to sequence concessions, and how to avoid giving things away for nothing",
         "full": (
             "Knowing when to make the first offer, how to sequence concessions, and "
             "how to avoid giving things away for nothing: every compromise should be "
@@ -68,6 +72,7 @@ _CRITERIA = [
     },
     {
         "short": "Tactical flexibility",
+        "title": "Switching between collaborative and competitive tactics depending on the counterpart and stakes",
         "full": (
             "Switching between collaborative (interest-based) and competitive "
             "(positional) tactics depending on the counterpart and stakes: when trust "
@@ -79,6 +84,7 @@ _CRITERIA = [
     },
     {
         "short": "Realistic expectations",
+        "title": "Keeping expectations realistic and getting authority to move before you're at the table",
         "full": (
             "Keeping expectations realistic and getting authority to move before "
             "you're at the table: ground your targets in data and likely trade-offs "
@@ -241,7 +247,7 @@ def evaluate_criteria(case: dict[str, Any], session: dict[str, Any]) -> list[dic
         if score not in ("strong", "adequate", "weak"):
             score = "adequate"
         result.append({
-            "short_name": raw.get("short_name") or c["short"],
+            "short_name": c["title"],
             "score": score,
             "quote": str(raw.get("quote", "")).strip() or "Not clearly demonstrated in this session.",
             "feedback": str(raw.get("feedback", "")).strip() or "Play more turns to generate specific feedback.",

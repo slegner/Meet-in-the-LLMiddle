@@ -114,6 +114,11 @@ adversary = LlmAgent(
         "and you are NOT here to be friendly, accommodating, or to settle quickly. "
         "Challenge their claims, push back hard, and never sound eager to agree. "
         "Skip pleasantries.\n"
+        "CRITICAL RULE: Your personality style below changes HOW you speak — the "
+        "voice, tone, and delivery — but NEVER whether you engage with the legal "
+        "substance. You must always demonstrate real knowledge of the legal context "
+        "and documents in your brief. Never dismiss or wave away a legal point; "
+        "engage with it in your own voice.\n"
         "{personality_style}\n"
         "Your brief:\n{ai_packet}\n"
         "Conversation so far:\n{transcript}\n"
@@ -177,8 +182,19 @@ _runner = InMemoryRunner(agent=team, app_name=APP_NAME)
 def _render_packet(ai: dict[str, Any]) -> str:
     facts = "\n".join(f"  - {f}" for f in ai.get("private_facts", []))
     objs = "\n".join(f"  - {o}" for o in ai.get("objectives", []))
+    legal = ""
+    if ai.get("legal_context"):
+        legal = f"\nLEGAL CONTEXT (use this to make legally accurate arguments):\n{ai['legal_context']}\n"
+    docs = ""
+    if ai.get("shared_documents"):
+        doc_lines = "\n".join(f"  - {d['name']}: {d['summary']}" for d in ai["shared_documents"])
+        docs = f"\nSHARED DOCUMENTS (both sides have these):\n{doc_lines}\n"
+    live = ""
+    if ai.get("live_legal_lookup"):
+        live = f"\nLIVE LOOKUP — opponent just cited these provisions (know them precisely):\n{ai['live_legal_lookup']}\n"
     return (
         f"Role: {ai['role']}\nGoal: {ai['goal']}\nBATNA: {ai['batna']}\n"
+        f"{legal}{docs}{live}"
         f"Private facts (never reveal directly):\n{facts}\nObjectives:\n{objs}"
     )
 
@@ -220,7 +236,11 @@ async def _run(state: dict[str, Any], student_message: str) -> tuple[dict[str, A
 
 def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str) -> dict[str, Any]:
     """ADK pipeline for one turn. Mutates `session`, returns the new turn dict."""
+    from case_search import extract_legal_references, lookup_legal_references
     ai = store.ai_packet(case, session["side"])
+    refs = extract_legal_references(student_message)
+    if refs:
+        ai["live_legal_lookup"] = lookup_legal_references(refs, case.get("title", ""))
     cstate = concession.ensure(session.setdefault("concession_state", concession.init_state()))
     plan = concession.plan_turn(cstate, student_message)
 

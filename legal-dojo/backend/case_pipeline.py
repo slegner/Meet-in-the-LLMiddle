@@ -190,6 +190,8 @@ def assemble_case(
         "title":            title,
         "summary":          parsed.get("summary", ""),
         "background":       parsed.get("background", ""),
+        "relevant_law":     parsed.get("relevant_law", []),
+        "legal_context":    "",   # populated by enrich_legal_context if Perplexity is available
         "shared_documents": parsed.get("shared_documents", []),
         "sources":          sources or [],
         "sides":            sides,
@@ -199,6 +201,7 @@ def assemble_case(
 # ---------------------------------------------------------------------------
 # Stage 4 — Name Sanitiser Agent
 # ---------------------------------------------------------------------------
+
 
 def sanitise_names(case: dict[str, Any], theme: str = "") -> dict[str, Any]:
     """Scan the assembled case for real human names and replace with fictional ones.
@@ -264,6 +267,37 @@ def sanitise_names(case: dict[str, Any], theme: str = "") -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Stage 5 — Legal Context Enrichment (Perplexity)
+# ---------------------------------------------------------------------------
+
+def enrich_legal_context(case: dict[str, Any]) -> dict[str, Any]:
+    """Use Perplexity to fetch real legal content for the laws cited in the case.
+
+    Stores the result in case["legal_context"] and appends any new source URLs.
+    Silently skips if PERPLEXITY_API_KEY is not set or if the call fails —
+    the case is fully playable without this enrichment.
+    """
+    relevant_law = case.get("relevant_law", [])
+    if not relevant_law:
+        return case
+
+    try:
+        law_list = ", ".join(relevant_law[:6])
+        query = (
+            f"Legal research for a negotiation case: '{case.get('title', '')}'. "
+            f"Explain the following legal provisions in detail — what they say, "
+            f"the key obligations and procedures they impose, and how they have "
+            f"been interpreted or applied in practice: {law_list}"
+        )
+        result = search_perplexity(query, max_chars=5000)
+        case["legal_context"] = result["text"]
+    except Exception:
+        pass  # non-fatal — case still fully usable without enrichment
+
+    return case
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
 
@@ -283,7 +317,8 @@ def generate_case(query: str) -> dict[str, Any]:
     parsed  = parse_case(raw)
     sides   = build_sides(parsed)
     case    = assemble_case(parsed, sides, sources=sources)
-    return sanitise_names(case)
+    case    = sanitise_names(case)
+    return enrich_legal_context(case)
 
 
 def generate_case_from_text(raw_text: str) -> dict[str, Any]:
@@ -291,7 +326,8 @@ def generate_case_from_text(raw_text: str) -> dict[str, Any]:
     parsed = parse_case(raw_text)
     sides  = build_sides(parsed)
     case   = assemble_case(parsed, sides)
-    return sanitise_names(case)
+    case   = sanitise_names(case)
+    return enrich_legal_context(case)
 
 
 def generate_parody_case(
@@ -326,4 +362,5 @@ def generate_parody_case(
     parsed = parse_case(raw_text + sub_instruction)
     sides  = build_sides(parsed)
     case   = assemble_case(parsed, sides)
-    return sanitise_names(case, theme=theme)
+    case   = sanitise_names(case, theme=theme)
+    return enrich_legal_context(case)

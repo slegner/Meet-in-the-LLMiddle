@@ -39,13 +39,13 @@ function CaseFilePanel({ cf }: { cf: CaseFile }) {
         ["BATNA", cf.batna],
       ].map(([label, text]) => (
         <div key={label} style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 4 }}>{label}</div>
+          <div style={{ fontWeight: 800, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.7px", color: "#5a4020", borderBottom: "1.5px solid #cbb783", paddingBottom: 2, marginBottom: 6 }}>{label}</div>
           <p style={{ margin: 0 }}>{text}</p>
         </div>
       ))}
 
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 3 }}>Objectives</div>
+        <div style={{ fontWeight: 800, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.7px", color: "#5a4020", borderBottom: "1.5px solid #cbb783", paddingBottom: 2, marginBottom: 6 }}>Objectives</div>
         <ul style={{ margin: 0, paddingLeft: 14 }}>
           {cf.objectives.map((o, i) => <li key={i} style={{ marginBottom: 3 }}>{o}</li>)}
         </ul>
@@ -53,7 +53,7 @@ function CaseFilePanel({ cf }: { cf: CaseFile }) {
 
       {cf.documents.length > 0 && (
         <div>
-          <div style={{ fontWeight: 700, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.5px", color: "#5a4020", marginBottom: 8 }}>Documents</div>
+          <div style={{ fontWeight: 800, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.7px", color: "#5a4020", borderBottom: "1.5px solid #cbb783", paddingBottom: 2, marginBottom: 8 }}>Documents</div>
           {cf.documents.map((d, i) => (
             <div key={i} style={{ borderLeft: "2px solid #a9842c", paddingLeft: 10, marginBottom: 10 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{d.name}</div>
@@ -160,10 +160,24 @@ function Scene() {
   const chunksRef = useRef<Blob[]>([]);
   const silenceRafRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  // Live transcript via Web Speech API (shows words as user speaks)
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   // Holds the transcribed text while the 1-second "show before send" window is open.
-  // Cleared if the user edits the textarea (they take over manually).
   const pendingVoiceTextRef = useRef<string | null>(null);
   const [voicePending, setVoicePending] = useState(false);
+  // Total number of times the user has cut off the AI this session
+  const interruptCountRef = useRef(0);
+  // Whether the most recent message was an interrupt (cleared after send)
+  const interruptedRef = useRef(false);
+  // RAF handle for the interrupt-detection loop that runs while TTS plays
+  const interruptRafRef = useRef<number | null>(null);
+
+  function stopInterruptMonitor() {
+    if (interruptRafRef.current !== null) {
+      cancelAnimationFrame(interruptRafRef.current);
+      interruptRafRef.current = null;
+    }
+  }
 
   function speak(text: string) {
     if (!voiceOn || !text) return;
@@ -171,9 +185,58 @@ function Scene() {
       if (!audioRef.current) audioRef.current = new Audio();
       audioRef.current.src = ttsUrl(text);
       audioRef.current.onended = () => {
+        stopInterruptMonitor();
         if (voiceModeRef.current && !endedRef.current) startListening().catch(() => {});
       };
       audioRef.current.play().catch(() => {});
+
+      // While TTS is playing in voice mode: monitor mic for user's voice.
+      // If they speak over the AI, stop the TTS and start recording immediately.
+      if (voiceModeRef.current) {
+        stopInterruptMonitor(); // cancel any previous monitor
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          // Don't start a monitor if we've already stopped voice mode or TTS ended
+          if (!voiceModeRef.current || !audioRef.current || audioRef.current.paused) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          const ctx = new AudioContext();
+          const src = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          src.connect(analyser);
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          let warmup = 0;
+          let highFrames = 0; // require sustained energy, not a single loud frame
+          function tick() {
+            if (!voiceModeRef.current || !audioRef.current || audioRef.current.paused) {
+              stream.getTracks().forEach((t) => t.stop());
+              ctx.close();
+              return;
+            }
+            analyser.getByteTimeDomainData(data);
+            const rms = Math.sqrt(data.reduce((s, v) => s + (v - 128) ** 2, 0) / data.length);
+            if (warmup < 25) { warmup++; highFrames = 0; }
+            else if (rms > 32) { highFrames++; }
+            else { highFrames = Math.max(0, highFrames - 1); }
+            if (highFrames >= 5) {
+              // User is speaking — interrupt the AI
+              stream.getTracks().forEach((t) => t.stop());
+              ctx.close();
+              stopInterruptMonitor();
+              audioRef.current!.onended = null;
+              stopSpeaking();
+              setEmotion("annoyed");
+              interruptedRef.current = true;
+              interruptCountRef.current++;
+              startListening().catch(() => {});
+              return;
+            }
+            interruptRafRef.current = requestAnimationFrame(tick);
+          }
+          interruptRafRef.current = requestAnimationFrame(tick);
+        }).catch(() => {}); // mic unavailable — button-based interrupt still works
+      }
     } catch { /* TTS is best-effort */ }
   }
 
@@ -225,6 +288,7 @@ function Scene() {
   }, [sending]);
 
   function stopSpeaking() {
+    stopInterruptMonitor();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -245,22 +309,55 @@ function Scene() {
     const mr = new MediaRecorder(stream);
     chunksRef.current = [];
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    // Live transcript: Web Speech API shows words as they're spoken.
+    // MediaRecorder captures the audio blob for the higher-accuracy Whisper pass.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SRApi = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (SRApi) {
+      try {
+        const rec: SpeechRecognition = new SRApi();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-GB";
+        rec.onresult = (event) => {
+          let live = "";
+          for (let i = 0; i < event.results.length; i++) {
+            live += event.results[i][0].transcript;
+          }
+          setInput(live);
+        };
+        rec.onerror = (e) => console.warn("[SpeechRecognition] error:", e.error);
+        recognitionRef.current = rec;
+        rec.start();
+      } catch (e) {
+        console.warn("[SpeechRecognition] failed to start:", e);
+      }
+    } else {
+      console.warn("[SpeechRecognition] not supported in this browser");
+    }
+
     mr.onstop = async () => {
+      // Stop live transcript
+      try { recognitionRef.current?.stop(); } catch {}
+      recognitionRef.current = null;
       stream.getTracks().forEach((t) => t.stop());
       stopSilenceDetection();
       setRecording(false);
       if (!voiceModeRef.current) return;
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      // Skip transcription if the blob is too small to contain real speech (~4 KB minimum).
+      // An empty/silent recording hallucination-triggers Whisper into completing its prompt.
+      if (blob.size < 4000) { setTranscribing(false); startListening().catch(() => {}); return; }
       setTranscribing(true);
       try {
+        // Whisper-1 via OpenAI API gives accurate legal-vocabulary transcription.
+        // Replaces the live Web Speech result with the corrected text.
         const text = await transcribeAudio(blob);
         if (text) {
-          // Show the transcript in the textarea so the user can read (and edit) it.
-          // Auto-send after 1 s unless the user modifies the field (which clears pendingVoiceTextRef).
           setInput(text);
           pendingVoiceTextRef.current = text;
           setVoicePending(true);
-          await new Promise<void>((r) => setTimeout(r, 1000));
+          await new Promise<void>((r) => setTimeout(r, 800));
           setVoicePending(false);
           if (pendingVoiceTextRef.current === text && voiceModeRef.current) {
             pendingVoiceTextRef.current = null;
@@ -302,14 +399,36 @@ function Scene() {
   }
 
   async function enterVoiceMode() {
-    if (audioRef.current && !audioRef.current.paused) {
-      audioRef.current.onended = null;
-      stopSpeaking();
-      setEmotion("annoyed");
-    }
     setVoiceMode(true);
     voiceModeRef.current = true;
     await startListening().catch(() => { setVoiceMode(false); voiceModeRef.current = false; });
+  }
+
+  // Mic button handler: smarter than a plain toggle.
+  // While AI is speaking → interrupt it and start listening immediately.
+  // While in voice mode but AI is silent → exit voice mode.
+  // While not in voice mode → enter voice mode.
+  function handleMicClick() {
+    const aiSpeaking = !!(audioRef.current && !audioRef.current.paused);
+    if (!voiceMode) {
+      if (aiSpeaking) {
+        audioRef.current!.onended = null;
+        stopSpeaking();
+        setEmotion("annoyed");
+        interruptedRef.current = true;
+      }
+      enterVoiceMode();
+      return;
+    }
+    if (aiSpeaking) {
+      audioRef.current!.onended = null;
+      stopSpeaking();
+      setEmotion("annoyed");
+      interruptedRef.current = true;
+      startListening().catch(() => {});
+    } else {
+      exitVoiceMode();
+    }
   }
 
   function exitVoiceMode() {
@@ -318,6 +437,8 @@ function Scene() {
     stopSilenceDetection();
     if (audioRef.current) audioRef.current.onended = null;
     mediaRecorderRef.current?.stop();
+    try { recognitionRef.current?.stop(); } catch {}
+    recognitionRef.current = null;
     stopSpeaking();
   }
 
@@ -331,8 +452,10 @@ function Scene() {
     isTypingRef.current = false;
     setMessages((m) => [...m, { role: "player", text }]);
     setSending(true);
+    const wasInterrupted = interruptedRef.current;
+    interruptedRef.current = false;
     try {
-      const res = await postChat(sid, text);
+      const res = await postChat(sid, text, wasInterrupted ? interruptCountRef.current : 0);
       setMessages((m) => [...m, { role: "ai", text: res.adversary }]);
       setTurns(res.turn_number);
       setPhase(res.phase);
@@ -512,7 +635,7 @@ function Scene() {
                     />
                     <button
                       className={`btn ${voiceMode ? "" : "btn-secondary"}`}
-                      onClick={voiceMode ? exitVoiceMode : enterVoiceMode}
+                      onClick={handleMicClick}
                       disabled={transcribing}
                       title={voiceMode ? "Exit voice mode" : "Enter voice mode"}
                       style={voiceMode ? { background: recording ? "#c0392b" : "#8b0000", color: "#fff", borderColor: recording ? "#c0392b" : "#8b0000" } : undefined}

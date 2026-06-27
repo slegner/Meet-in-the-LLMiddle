@@ -130,6 +130,12 @@ export const listCases = () => getJSON<CaseSummary[]>("/cases");
 export const getCase = (id: string) => getJSON<CaseDetail>(`/cases/${id}`);
 export const generateCase = (query: string, save = true) =>
   send<CaseDetail>("POST", "/cases/generate", { query, save });
+
+export const generateParodyCase = (
+  text: string,
+  substitutions: Record<string, string>,
+  save = true,
+) => send<CaseDetail>("POST", "/cases/generate-parody", { text, substitutions, save });
 export interface Personality {
   id: string;
   label: string;
@@ -141,8 +147,8 @@ export const startSession = (case_id: string, side: Side, personality = "default
   send<StartResponse>("POST", "/sessions", { case_id, side, personality });
 export const getCaseFile = (sid: string) =>
   getJSON<CaseFile>(`/sessions/${sid}/casefile`);
-export const postChat = (sid: string, message: string) =>
-  send<ChatResponse>("POST", `/sessions/${sid}/chat`, { message });
+export const postChat = (sid: string, message: string, interrupt_count = 0) =>
+  send<ChatResponse>("POST", `/sessions/${sid}/chat`, { message, interrupt_count });
 export const endSession = (sid: string, accepted = false) =>
   send<Report>("POST", `/sessions/${sid}/end`, { accepted });
 export const nudgeSession = (sid: string) =>

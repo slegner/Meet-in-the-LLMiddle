@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
+import GuideButton from "./components/GuideButton";
 
 export const metadata: Metadata = {
   title: "Legal Dojo",
@@ -18,12 +19,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <nav className="nav">
               <Link href="/">New Simulation</Link>
-              <Link href="/guide">Guide</Link>
               <Link href="/profile">Training Data</Link>
             </nav>
           </div>
         </header>
         {children}
+        <GuideButton />
       </body>
     </html>
   );

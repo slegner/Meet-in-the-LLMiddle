@@ -6,14 +6,16 @@ type Principle = { heading: string; body: string };
 
 function parseMd(raw: string): Principle[] {
   const principles: Principle[] = [];
-  const chunks = raw.split(/\n\n+/).map((c) => c.trim()).filter(Boolean);
-  for (let i = 0; i < chunks.length; i++) {
-    if (chunks[i].startsWith("# ")) {
-      const heading = chunks[i].replace(/^#\s+/, "").replace(/\.$/, "");
-      const body = chunks[i + 1] && !chunks[i + 1].startsWith("#") ? chunks[i + 1] : "";
-      if (body) i++;
-      principles.push({ heading, body });
-    }
+  // Split on blank lines; each block is either a heading+body or standalone text
+  const blocks = raw.split(/\n\n+/).map((b) => b.trim()).filter(Boolean);
+  for (const block of blocks) {
+    if (!block.startsWith("# ")) continue;
+    const lines = block.split("\n");
+    const heading = lines[0].replace(/^#\s+/, "").replace(/\.$/, "").trim();
+    // Capitalise first letter (some headings start lowercase in the file)
+    const title = heading.charAt(0).toUpperCase() + heading.slice(1);
+    const body = lines.slice(1).join(" ").trim();
+    principles.push({ heading: title, body });
   }
   return principles;
 }
@@ -36,10 +38,12 @@ export default function GuidePage() {
 
       {principles.map((p, i) => (
         <div key={i} className="card" style={{ marginBottom: 16 }}>
-          <p style={{ margin: "0 0 6px", fontWeight: 700, fontSize: 15 }}>
+          <p style={{ margin: "0 0 14px", fontWeight: 700, fontSize: 19, lineHeight: 1.3 }}>
             {i + 1}. {p.heading}
           </p>
-          <p style={{ margin: 0, lineHeight: 1.7, fontSize: 14 }}>{p.body}</p>
+          <p style={{ margin: 0, lineHeight: 1.8, fontSize: 14, color: "var(--muted)" }}>
+            {p.body}
+          </p>
         </div>
       ))}
     </div>

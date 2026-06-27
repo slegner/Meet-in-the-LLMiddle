@@ -6,6 +6,7 @@ Planned: EU Cellar API (SPARQL + document fetch).
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -77,3 +78,50 @@ def search_perplexity(query: str, max_chars: int = 8000) -> dict:
         text += "\n\nSOURCES:\n" + "\n".join(f"- {c}" for c in citations[:8])
 
     return {"text": text[:max_chars], "citations": citations[:8]}
+
+
+# ---------------------------------------------------------------------------
+# Per-turn legal reference lookup
+# ---------------------------------------------------------------------------
+
+# Matches: "Article 50", "Article 50(3)", "Article 4.3 TEU", "Section 13(1)(b)",
+#          "Schedule 2", "Clause 5", and named Acts/Directives/Treaties with a year.
+_ARTICLE_RE = re.compile(
+    r'\b(?:Article|Art\.?|Section|Sec\.?|Clause|Schedule|Para(?:graph)?)\s+'
+    r'[\d]+(?:[.(][\d\w]+[).)]?)*'
+    r'(?:\s+(?:TEU|TFEU|ECHR|of\s+the\s+[\w\s]{3,40}))?',
+    re.IGNORECASE,
+)
+_ACT_RE = re.compile(
+    r'\b(?:[A-Z][a-z]+\s+){1,6}(?:\([A-Za-z\s]+\)\s+)?(?:Act|Directive|Regulation|Treaty|Convention)\s+\d{4}\b'
+)
+
+
+def extract_legal_references(text: str) -> list[str]:
+    """Return unique legal references found in `text`, capped at 5."""
+    found: list[str] = []
+    seen: set[str] = set()
+    for m in _ARTICLE_RE.findall(text) + _ACT_RE.findall(text):
+        key = m.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            found.append(m.strip())
+    return found[:5]
+
+
+def lookup_legal_references(refs: list[str], case_title: str = "") -> str:
+    """Query Perplexity for the cited legal provisions. Returns "" on failure or no key."""
+    if not refs or not PERPLEXITY_API_KEY:
+        return ""
+    ref_list = "; ".join(refs)
+    context = f" in the context of '{case_title}'" if case_title else ""
+    query = (
+        f"Explain the following legal provisions{context}: {ref_list}. "
+        "For each, state precisely what it says, what obligations or rights it creates, "
+        "and any key interpretations. Be concise and accurate."
+    )
+    try:
+        result = search_perplexity(query, max_chars=2000)
+        return result["text"]
+    except Exception:
+        return ""

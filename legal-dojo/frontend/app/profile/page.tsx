@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getProfile, saveProfile, listSessions, getReport, type Observation, type Profile, type SessionCard, type Report } from "@/lib/api";
+import { getProfile, saveProfile, listSessions, getReport, type Observation, type Profile, type SessionCard, type Report, type CriterionResult } from "@/lib/api";
+
+function ScoreBadge({ score }: { score: CriterionResult["score"] }) {
+  const map = {
+    strong:   { label: "✓ Strong",   bg: "rgba(74,222,128,0.15)", color: "#4ade80", border: "rgba(74,222,128,0.35)" },
+    adequate: { label: "~ Adequate", bg: "rgba(250,204,21,0.12)", color: "#facc15", border: "rgba(250,204,21,0.3)" },
+    weak:     { label: "✗ Weak",     bg: "rgba(239,111,111,0.15)", color: "var(--danger)", border: "rgba(239,111,111,0.35)" },
+  };
+  const s = map[score] ?? map.adequate;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`, whiteSpace: "nowrap" }}>
+      {s.label}
+    </span>
+  );
+}
 
 const EVICT_AFTER = 3;
 
@@ -295,11 +310,34 @@ export default function ProfilePage() {
                   )}
                   <p style={{ fontSize: 14, margin: "0 0 8px" }}>{openReport.report.summary}</p>
                   <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                    <b style={{ color: "var(--text)" }}>How your opponent saw you:</b> {openReport.report.perception.comments}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>
                     <b style={{ color: "var(--text)" }}>Legal:</b> {openReport.report.legal.comments}
                   </div>
                   <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>
                     <b style={{ color: "var(--text)" }}>Negotiation:</b> {openReport.report.negotiation.comments}
                   </div>
+
+                  {openReport.report.criteria && openReport.report.criteria.length > 0 && (
+                    <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>📋 Negotiator&apos;s Checklist</div>
+                      {openReport.report.criteria.map((c, i) => (
+                        <div key={i} style={{
+                          paddingBottom: 12, marginBottom: 12,
+                          borderBottom: i < openReport.report.criteria!.length - 1 ? "1px solid var(--border)" : "none",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                            <span style={{ fontWeight: 600, fontSize: 13 }}>{c.short_name}</span>
+                            <ScoreBadge score={c.score} />
+                          </div>
+                          <p style={{ margin: "0 0 4px", fontStyle: "italic", fontSize: 12, color: "var(--muted)" }}>{c.quote}</p>
+                          <p style={{ margin: 0, fontSize: 12 }}>{c.feedback}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {openReport.report.weak_spots.length > 0 && (
                     <div style={{ marginTop: 8 }}>
                       {openReport.report.weak_spots.map((w, i) => (

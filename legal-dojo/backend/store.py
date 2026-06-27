@@ -80,6 +80,8 @@ def ai_packet(case: dict[str, Any], player_side: str) -> dict[str, Any]:
     return {
         "title": case["title"],
         "background": case["background"],
+        "legal_context": case.get("legal_context", ""),
+        "shared_documents": case.get("shared_documents", []),
         "side": side,
         "role": s["role"],
         "goal": s["goal"],
