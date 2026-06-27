@@ -282,7 +282,7 @@ def put_player_memory(profile: ProfileModel):
 
 
 # ---------------------------------------------------------------------------
-# Speech-to-text (local Whisper, lazy-loaded)
+# Speech-to-text (faster-whisper, lazy-loaded — no LLVM dependency)
 # ---------------------------------------------------------------------------
 
 _whisper_model = None
@@ -291,8 +291,8 @@ _whisper_model = None
 def _get_whisper():
     global _whisper_model
     if _whisper_model is None:
-        import whisper
-        _whisper_model = whisper.load_model("small")
+        from faster_whisper import WhisperModel
+        _whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
     return _whisper_model
 
 
@@ -305,7 +305,8 @@ async def transcribe(audio: UploadFile = File(...)):
         f.write(data)
         tmp_path = f.name
     try:
-        result = _get_whisper().transcribe(tmp_path, language="en", temperature=0.0)
-        return {"text": result["text"].strip()}
+        segments, _ = _get_whisper().transcribe(tmp_path, language="en", beam_size=5)
+        text = " ".join(seg.text.strip() for seg in segments)
+        return {"text": text.strip()}
     finally:
         os.unlink(tmp_path)
