@@ -146,6 +146,8 @@ h3 { font-size: 15px; margin: 0 0 6px; }
   line-height: 1.65;
 }
 .paper h1, .paper h2, .paper h3 { color: #3a2c10; font-family: Georgia, serif; }
+.paper h2 { font-size: 30px; }
+.paper h3 { font-size: 20px; margin-top: 20px; margin-bottom: 4px; }
 .paper .subtitle, .paper .muted, .paper .doc-summary { color: #6a5a33; }
 .paper .doc { border-left: 3px solid #a9842c; }
 .paper hr { border: none; border-top: 1px solid #cbb783; margin: 18px 0; }
