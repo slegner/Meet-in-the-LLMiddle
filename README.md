@@ -1,6 +1,6 @@
 # Meet in the LLMiddle
 
-A gamified legal-negotiation trainer. Pick a side of a real or parody legal dispute, negotiate against a multi-agent AI opponent, and receive a structured coaching report graded against Harvard negotiation principles.
+A gamified legal-negotiation trainer. Pick a side of a real or parody legal dispute, negotiate against a multi-agent AI opponent, and receive a structured coaching report graded against the playbook's negotiation principles.
 
 Built as part of PhD research at the University of Cambridge (2025–26) on LLM-mediated legal negotiation training.
 
@@ -119,7 +119,7 @@ The coaching report runs a 5-stage pipeline:
 |-------|--------------|
 | **Splitter** | Routes the transcript into a legal brief and a negotiation brief |
 | **Legal evaluator** | Senior litigation solicitor — critiques argument accuracy and use of clauses |
-| **Negotiation evaluator** | Harvard-method expert — judges tactical performance against the 6 criteria |
+| **Negotiation evaluator** | Playbook expert — judges tactical performance against the 6 criteria |
 | **Perception evaluator** | The AI opponent speaking privately — how it read the student as a person |
 | **Criteria grader** | **Nemotron Super** (120B reasoning model) scores each of the 6 principles with a verbatim quote, a verdict (strong / adequate / weak), and two sentences of feedback |
 
@@ -129,7 +129,7 @@ Nemotron uses streaming with thinking enabled (`reasoning_budget=1024`) — it d
 
 ## The 6 Negotiation Criteria
 
-The coaching report and the merit concession system both use these Harvard-method principles:
+The coaching report and the merit concession system both use these Playbook principles:
 
 | # | Criterion | What it tests |
 |---|-----------|---------------|
