@@ -70,9 +70,12 @@ echo "  └───────────────────────
 echo ""
 
 # Stream both logs until Ctrl+C; exit if either server dies.
+# (Poll loop instead of `wait -n` so it works on macOS's bash 3.2.)
 tail -n +1 -f "$LOGS/backend.log" "$LOGS/frontend.log" &
 TPID=$!
-wait -n "$BPID" "$FPID"
+while kill -0 "$BPID" 2>/dev/null && kill -0 "$FPID" 2>/dev/null; do
+  sleep 1
+done
 echo "==> A server exited; shutting the other down."
 kill "$TPID" 2>/dev/null || true
 cleanup
