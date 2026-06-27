@@ -125,6 +125,8 @@ export const postChat = (sid: string, message: string) =>
   send<ChatResponse>("POST", `/sessions/${sid}/chat`, { message });
 export const endSession = (sid: string, accepted = false) =>
   send<Report>("POST", `/sessions/${sid}/end`, { accepted });
+export const nudgeSession = (sid: string) =>
+  send<ChatResponse>("POST", `/sessions/${sid}/nudge`);
 export const getReport = (sid: string) => getJSON<Report>(`/sessions/${sid}/report`);
 export interface TurnRecord {
   n: number;

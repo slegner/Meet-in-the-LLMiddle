@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { postChat, endSession, getSession, getCaseFile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
+import { postChat, endSession, nudgeSession, getSession, getCaseFile, ttsUrl, type Report, type CaseFile } from "@/lib/api";
 
 const ACTIVE_KEY = "legaldojo_activeSid";
 import HistoryOverlay from "../components/HistoryOverlay";
@@ -85,6 +85,66 @@ function Scene() {
   const [ended, setEnded] = useState(false);
 
   const [emotion, setEmotion] = useState<"neutral" | "annoyed" | "deal">("neutral");
+
+  // ── Timer ──────────────────────────────────────────────────────────────────
+  const IDLE_SECS = 120;     // 2 min idle (player hasn't started typing)
+  const RESPONSE_SECS = 300; // 5 min response (player started typing but hasn't sent)
+  const [timerOn, setTimerOn] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  // Refs so timer callbacks read current values without stale closures
+  const timerOnRef = useRef(false);
+  const sendingRef = useRef(false);
+  const endedRef = useRef(false);
+  const isTypingRef = useRef(false);
+
+  useEffect(() => { timerOnRef.current = timerOn; }, [timerOn]);
+  useEffect(() => { sendingRef.current = sending; }, [sending]);
+  useEffect(() => { endedRef.current = ended; }, [ended]);
+
+  // Countdown tick — one setTimeout per second so cleanup is automatic
+  useEffect(() => {
+    if (!timerOn || countdown === null) return;
+    if (countdown <= 0) {
+      setCountdown(null);
+      if (!sendingRef.current && !endedRef.current) fireNudge();
+      return;
+    }
+    const id = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(id);
+  }, [countdown, timerOn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function startIdleTimer() {
+    if (!timerOnRef.current) return;
+    isTypingRef.current = false;
+    setCountdown(IDLE_SECS);
+  }
+
+  function onInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value);
+    // First keystroke switches from idle timer to (longer) response timer
+    if (timerOnRef.current && !isTypingRef.current && e.target.value.trim()) {
+      isTypingRef.current = true;
+      setCountdown(RESPONSE_SECS);
+    }
+  }
+
+  async function fireNudge() {
+    if (sendingRef.current || endedRef.current) return;
+    setSending(true);
+    try {
+      const res = await nudgeSession(sid);
+      setMessages((m) => [...m, { role: "ai", text: res.adversary }]);
+      setTurns(res.turn_number);
+      setPhase(res.phase);
+      setEmotion(res.emotion ?? "neutral");
+      speak(res.adversary);
+      startIdleTimer();
+    } catch { /* silent — don't disrupt the session */ } finally {
+      setSending(false);
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [voiceOn, setVoiceOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -153,6 +213,8 @@ function Scene() {
     stopSpeaking();
     setError(null);
     setInput("");
+    setCountdown(null);           // pause timer while AI is replying
+    isTypingRef.current = false;
     setMessages((m) => [...m, { role: "player", text }]);
     setSending(true);
     try {
@@ -162,6 +224,7 @@ function Scene() {
       setPhase(res.phase);
       setEmotion(res.emotion ?? "neutral");
       speak(res.adversary);
+      startIdleTimer();           // restart 2-min idle clock after AI speaks
     } catch {
       setMessages((m) => m.slice(0, -1));
       setInput(text);
@@ -228,6 +291,31 @@ function Scene() {
         >
           {voiceOn ? "🔊 Voice on" : "🔇 Voice off"}
         </button>
+        <button
+          className="btn btn-secondary"
+          style={{ borderColor: timerOn ? "var(--accent)" : undefined }}
+          onClick={() => {
+            const next = !timerOn;
+            setTimerOn(next);
+            timerOnRef.current = next;
+            if (next) { isTypingRef.current = false; setCountdown(IDLE_SECS); }
+            else setCountdown(null);
+          }}
+          title="2 min idle / 5 min response — AI presses on if you go silent"
+        >
+          ⏱ Timer {timerOn ? "on" : "off"}
+        </button>
+        {timerOn && countdown !== null && (
+          <div style={{
+            fontFamily: "monospace",
+            fontWeight: 700,
+            fontSize: 14,
+            minWidth: 46,
+            color: countdown < 30 ? "var(--danger)" : countdown < 60 ? "var(--accent)" : "var(--muted)",
+          }}>
+            {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
+          </div>
+        )}
         <div className="turn-counter" style={{ margin: "0 4px" }}>
           Turn {turns}{phase && <span className="phase-pill">{phase}</span>}
         </div>
@@ -293,7 +381,7 @@ function Scene() {
                   <div className="composer">
                     <textarea
                       value={input}
-                      onChange={(e) => setInput(e.target.value)}
+                      onChange={onInputChange}
                       onKeyDown={onKeyDown}
                       placeholder="Type your argument… (Enter to send)"
                       disabled={sending}

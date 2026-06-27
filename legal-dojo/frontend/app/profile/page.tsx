@@ -90,7 +90,7 @@ export default function ProfilePage() {
 
   return (
     <div className="container" style={{ maxWidth: 1280 }}>
-      <h1>Training Profile</h1>
+      <h1>Training Data</h1>
       <p className="subtitle">
         The AI uses this to remember how you negotiate and to target your weak spots.
       </p>

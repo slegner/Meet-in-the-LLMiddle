@@ -115,6 +115,14 @@ def get_casefile(sid: str):
     return store.player_packet(case, session["side"])
 
 
+def _emotion_from_phase(phase: str) -> str:
+    if phase in ("aggressive", "firm"):
+        return "annoyed"
+    if phase in ("concede", "compromise"):
+        return "deal"
+    return "neutral"
+
+
 @app.post("/sessions/{sid}/chat", response_model=ChatResponse)
 def chat(sid: str, req: ChatRequest):
     try:
@@ -127,13 +135,31 @@ def chat(sid: str, req: ChatRequest):
     turn = agents.run_turn(case, session, req.message)
     store.save_session(session)
     phase = turn["phase"]
-    if phase in ("aggressive", "firm"):
-        emotion = "annoyed"
-    elif phase in ("concede", "compromise"):
-        emotion = "deal"
-    else:
-        emotion = "neutral"
-    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase, emotion=emotion)
+    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase,
+                        emotion=_emotion_from_phase(phase))
+
+
+@app.post("/sessions/{sid}/nudge", response_model=ChatResponse)
+def nudge_session(sid: str):
+    """AI takes the initiative when the player has gone silent (timer expired)."""
+    try:
+        session = store.load_session(sid)
+        case = store.load_case(session["case_id"])
+    except FileNotFoundError:
+        raise HTTPException(404, "Session not found")
+    if session.get("status") == "ended":
+        raise HTTPException(409, "This negotiation has already ended.")
+    timeout_prompt = (
+        "[TIMEOUT: The student has gone silent. Seize the initiative — press your "
+        "strongest argument harder, challenge a weakness you spotted, or raise a new "
+        "demand. Do NOT mention or acknowledge the silence directly.]"
+    )
+    turn = agents.run_turn(case, session, timeout_prompt)
+    turn["student"] = ""  # don't surface the internal prompt in the transcript
+    store.save_session(session)
+    phase = turn["phase"]
+    return ChatResponse(adversary=turn["adversary"], turn_number=turn["n"], phase=phase,
+                        emotion=_emotion_from_phase(phase))
 
 
 @app.post("/sessions/{sid}/end")
