@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -64,15 +65,22 @@ _TIMEOUT_MS = int(os.environ.get("LLM_TIMEOUT_MS", "30000"))
 _THINKING = os.environ.get("LLM_THINKING", "0") == "1"
 
 
-@lru_cache(maxsize=1)
-def _gemini_client():
-    from google import genai  # imported lazily so other providers don't need it
-    from google.genai import types
+_gemini_local = threading.local()
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise LLMError("GEMINI_API_KEY is not set in the environment.")
-    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=_TIMEOUT_MS))
+
+def _gemini_client():
+    # One client per thread — the google-genai httpx client is not safe for
+    # concurrent use from multiple threads when shared via lru_cache.
+    if not hasattr(_gemini_local, "client"):
+        from google import genai
+        from google.genai import types
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise LLMError("GEMINI_API_KEY is not set in the environment.")
+        _gemini_local.client = genai.Client(
+            api_key=api_key, http_options=types.HttpOptions(timeout=_TIMEOUT_MS)
+        )
+    return _gemini_local.client
 
 
 def _gemini_generate(prompt: str, system: str, role: str, json_mode: bool, temperature: float) -> str:
@@ -97,13 +105,19 @@ def _gemini_generate(prompt: str, system: str, role: str, json_mode: bool, tempe
 # Nemotron adapter — used specifically for evaluate_criteria (deep judgment)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
+_nvidia_local = threading.local()
+
+
 def _nvidia_client():
-    from openai import OpenAI
-    api_key = os.environ.get("NVIDIA_API_KEY")
-    if not api_key:
-        raise LLMError("NVIDIA_API_KEY is not set.")
-    return OpenAI(base_url="https://integrate.api.nvidia.com/v1", api_key=api_key)
+    if not hasattr(_nvidia_local, "client"):
+        from openai import OpenAI
+        api_key = os.environ.get("NVIDIA_API_KEY")
+        if not api_key:
+            raise LLMError("NVIDIA_API_KEY is not set.")
+        _nvidia_local.client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1", api_key=api_key
+        )
+    return _nvidia_local.client
 
 
 def nemotron_generate_json(prompt: str, system: str = "") -> Any:
