@@ -6,7 +6,6 @@ import {
   listCases,
   listPersonalities,
   getCase,
-  generateCase,
   startSession,
   getSession,
   type CaseSummary,
@@ -25,8 +24,6 @@ export default function StartPage() {
   const [personality, setPersonality] = useState("default");
   const [personalityList, setPersonalityList] = useState<Personality[]>([]);
   const [starting, setStarting] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [genQuery, setGenQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<{ sid: string; turns: number; side: Side } | null>(null);
 
@@ -56,28 +53,16 @@ export default function StartPage() {
     if (!detail || !side) return;
     setStarting(true);
     try {
-      const res = await startSession(detail.id, side, personality);
+      let chosen = personality;
+      if (chosen === "__random__") {
+        const pool = personalityList.filter((p) => p.id !== "__random__");
+        chosen = pool[Math.floor(Math.random() * pool.length)].id;
+      }
+      const res = await startSession(detail.id, side, chosen);
       router.push(`/play?sid=${res.session_id}`);
     } catch {
       setError("Could not start the simulation.");
       setStarting(false);
-    }
-  }
-
-  async function generate() {
-    if (!genQuery.trim()) return;
-    setGenerating(true);
-    setError(null);
-    try {
-      const newCase = await generateCase(genQuery.trim());
-      setCases((cs) => [...cs, { id: newCase.id, title: newCase.title, summary: newCase.summary }]);
-      setDetail(newCase);
-      setSide(null);
-      setGenQuery("");
-    } catch (e) {
-      setError(`Case generation failed: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setGenerating(false);
     }
   }
 
@@ -107,10 +92,10 @@ export default function StartPage() {
       <h1>New Simulation</h1>
       <p className="subtitle">Read the case file, choose your side, and negotiate against the AI.</p>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, alignItems: "stretch" }}>
+      {cases.length > 1 && (
         <select
           style={{
-            flex: "0 0 auto",
+            marginBottom: 20,
             padding: "8px 12px",
             borderRadius: 8,
             border: "1px solid var(--border)",
@@ -128,32 +113,7 @@ export default function StartPage() {
             <option key={c.id} value={c.id}>{c.title}</option>
           ))}
         </select>
-        <input
-          type="text"
-          placeholder='Generate new case… e.g. "employment tribunal unfair dismissal UK"'
-          value={genQuery}
-          onChange={(e) => setGenQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && generate()}
-          disabled={generating}
-          style={{
-            flex: 1,
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            background: "var(--panel)",
-            color: "var(--fg)",
-            fontSize: 14,
-          }}
-        />
-        <button
-          className="btn"
-          onClick={generate}
-          disabled={generating || !genQuery.trim()}
-          style={{ whiteSpace: "nowrap" }}
-        >
-          {generating ? "Generating…" : "Generate"}
-        </button>
-      </div>
+      )}
 
       <section className="paper">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -199,8 +159,8 @@ export default function StartPage() {
       {personalityList.length > 1 && (
         <>
           <h3 style={{ marginTop: 24 }}>Opponent personality</h3>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {personalityList.map((p) => (
+          <div style={{ display: "flex", gap: 12 }}>
+            {[...personalityList, { id: "__random__", label: "Randomise", description: "You won't know who until they speak." }].map((p) => (
               <div
                 key={p.id}
                 onClick={() => setPersonality(p.id)}
@@ -210,12 +170,12 @@ export default function StartPage() {
                   borderRadius: 10,
                   border: `2px solid ${personality === p.id ? "var(--accent)" : "var(--border)"}`,
                   background: personality === p.id ? "rgba(198,160,79,0.12)" : "var(--panel)",
-                  minWidth: 140,
+                  flex: 1,
                   transition: "border-color 0.15s",
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 3 }}>{p.label}</div>
-                <div className="muted" style={{ fontSize: 12 }}>{p.description}</div>
+                <div style={{ fontWeight: 700, marginBottom: p.description ? 3 : 0 }}>{p.label}</div>
+                {p.description && <div className="muted" style={{ fontSize: 12 }}>{p.description}</div>}
               </div>
             ))}
           </div>
