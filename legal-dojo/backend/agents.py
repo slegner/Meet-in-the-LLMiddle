@@ -244,7 +244,7 @@ def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str
         return adk_negotiator.run_turn(case, session, student_message)
 
     ai = store.ai_packet(case, session["side"])
-    state = session.setdefault("concession_state", concession.init_state())
+    state = concession.ensure(session.setdefault("concession_state", concession.init_state()))
     plan = concession.plan_turn(state, student_message)
 
     if FAST_MODE:

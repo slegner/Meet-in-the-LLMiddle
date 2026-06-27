@@ -201,7 +201,7 @@ async def _run(state: dict[str, Any], student_message: str) -> tuple[dict[str, A
 def run_turn(case: dict[str, Any], session: dict[str, Any], student_message: str) -> dict[str, Any]:
     """ADK pipeline for one turn. Mutates `session`, returns the new turn dict."""
     ai = store.ai_packet(case, session["side"])
-    cstate = session.setdefault("concession_state", concession.init_state())
+    cstate = concession.ensure(session.setdefault("concession_state", concession.init_state()))
     plan = concession.plan_turn(cstate, student_message)
 
     seed = {

@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import concession
+
 DATA_DIR = Path(__file__).parent / "data"
 SESSIONS_DIR = DATA_DIR / "sessions"
 CASES_DIR = DATA_DIR / "cases"
@@ -104,7 +106,7 @@ def create_session(case_id: str, side: str) -> dict[str, Any]:
         "ended_at": None,
         "summary": "",
         "ai_memory": [],
-        "concession_state": {},
+        "concession_state": concession.init_state(),
         "turns": [],
         "report": None,
     }

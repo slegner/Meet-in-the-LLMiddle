@@ -8,10 +8,13 @@ and game-like regardless of model whim:
   * If the user makes a strong, logical legal argument, concede slightly on the
     AI's next turn.
   * Never repeat the exact same demand more than twice.
-  * From turn 6 onward, drive toward a middle-ground compromise.
+  * From a per-session random turn (6-12), drive toward a middle-ground
+    compromise.
 """
 from __future__ import annotations
 
+import os
+import random
 import re
 from typing import Any
 
@@ -41,12 +44,28 @@ _STRONG_ARGUMENT_SIGNALS = (
 )
 
 
+# The turn from which the opponent starts driving toward compromise is rolled
+# once per session, so the player can't predict exactly when it softens.
+COMPROMISE_MIN = int(os.environ.get("COMPROMISE_MIN", "6"))
+COMPROMISE_MAX = int(os.environ.get("COMPROMISE_MAX", "12"))
+
+
 def init_state() -> dict[str, Any]:
     return {
         "turn": 0,
         "recent_demands": [],   # normalized demand signatures, newest last
         "phase_history": [],    # phase used each AI turn
+        "compromise_turn": random.randint(COMPROMISE_MIN, COMPROMISE_MAX),
     }
+
+
+def ensure(state: dict[str, Any]) -> dict[str, Any]:
+    """Backfill any missing keys (e.g. for sessions created before this field)."""
+    state.setdefault("turn", 0)
+    state.setdefault("recent_demands", [])
+    state.setdefault("phase_history", [])
+    state.setdefault("compromise_turn", random.randint(COMPROMISE_MIN, COMPROMISE_MAX))
+    return state
 
 
 def detect_strong_argument(message: str) -> bool:
@@ -71,8 +90,9 @@ def plan_turn(state: dict[str, Any], student_message: str) -> dict[str, Any]:
     strong = detect_strong_argument(student_message)
     recent = state.get("recent_demands", [])
     repeated = len(recent) >= 2 and recent[-1] == recent[-2]
+    compromise_turn = state.get("compromise_turn", COMPROMISE_MIN)
 
-    if turn_number >= 6:
+    if turn_number >= compromise_turn:
         phase = "compromise"
     elif strong:
         phase = "concede"
