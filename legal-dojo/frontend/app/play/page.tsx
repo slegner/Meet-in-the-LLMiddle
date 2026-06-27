@@ -31,6 +31,22 @@ function Scene() {
     if (expanded) histRef.current?.scrollTo({ top: histRef.current.scrollHeight });
   }, [messages, expanded]);
 
+  // While the 4-agent team runs (~6-7s), cycle a themed status so the wait
+  // reads as "the opponent is strategising" rather than "stuck".
+  const THINKING = [
+    "Opposing counsel is strategising…",
+    "weighing several lines of attack…",
+    "predicting where each could lead…",
+    "deciding their move…",
+  ];
+  const [thinkIdx, setThinkIdx] = useState(0);
+  useEffect(() => {
+    if (!sending) return;
+    setThinkIdx(0);
+    const id = setInterval(() => setThinkIdx((i) => i + 1), 1700);
+    return () => clearInterval(id);
+  }, [sending]);
+
   async function send() {
     const text = input.trim();
     if (!text || sending || ended) return;
@@ -74,7 +90,7 @@ function Scene() {
   const last = messages[messages.length - 1];
   const speaker: "player" | "ai" = sending ? "ai" : last?.role ?? "player";
   const lineText = sending
-    ? "…"
+    ? THINKING[Math.min(thinkIdx, THINKING.length - 1)]
     : last?.text ?? "Opposing counsel is waiting. Make your opening move.";
   const speakerName = speaker === "player" ? "You" : "Opposing Counsel";
 
