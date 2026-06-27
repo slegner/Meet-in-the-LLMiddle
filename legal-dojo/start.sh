@@ -35,7 +35,8 @@ fi
 mkdir -p "$LOGS"
 
 echo "==> Starting backend  on http://localhost:8000"
-( cd "$BACKEND" && exec .venv/bin/uvicorn main:app --port 8000 ) >"$LOGS/backend.log" 2>&1 &
+# --reload: backend picks up Python changes automatically, no manual restart.
+( cd "$BACKEND" && exec .venv/bin/uvicorn main:app --port 8000 --reload ) >"$LOGS/backend.log" 2>&1 &
 BPID=$!
 
 echo "==> Starting frontend on http://localhost:3000"
