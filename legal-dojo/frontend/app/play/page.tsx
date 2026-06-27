@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { postChat, endSession, fetchTtsUrl, type Report } from "@/lib/api";
+import { postChat, endSession, ttsUrl, type Report } from "@/lib/api";
 import CaseFileOverlay from "../components/CaseFileOverlay";
 import HistoryOverlay from "../components/HistoryOverlay";
 import ReportView from "../components/ReportView";
@@ -28,16 +28,12 @@ function Scene() {
 
   const [voiceOn, setVoiceOn] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lastUrlRef = useRef<string | null>(null);
 
-  async function speak(text: string) {
-    if (!voiceOn) return;
+  function speak(text: string) {
+    if (!voiceOn || !text) return;
     try {
-      const url = await fetchTtsUrl(text);
-      if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
-      lastUrlRef.current = url;
       if (!audioRef.current) audioRef.current = new Audio();
-      audioRef.current.src = url;
+      audioRef.current.src = ttsUrl(text); // streams + plays progressively
       audioRef.current.play().catch(() => {}); // ignore autoplay blocks
     } catch {
       /* TTS is best-effort; text still works */

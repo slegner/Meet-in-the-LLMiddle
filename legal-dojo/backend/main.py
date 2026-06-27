@@ -11,7 +11,7 @@ import store
 import tts as tts_module
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, Response
+from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from models import (
     ChatRequest,
     ChatResponse,
@@ -190,16 +190,12 @@ def get_transcript(sid: str):
 # Player memory (Training Profile)
 # ---------------------------------------------------------------------------
 
-@app.post("/tts")
-def tts(req: TtsRequest):
-    text = (req.text or "").strip()
+@app.get("/tts")
+def tts(text: str):
+    text = (text or "").strip()
     if not text:
         raise HTTPException(400, "No text to speak.")
-    try:
-        audio = tts_module.synthesize(text)
-    except Exception as e:
-        raise HTTPException(502, f"TTS failed: {e}")
-    return Response(content=audio, media_type="audio/wav")
+    return StreamingResponse(tts_module.stream_tts(text), media_type=tts_module.media_type())
 
 
 @app.get("/player-memory")
