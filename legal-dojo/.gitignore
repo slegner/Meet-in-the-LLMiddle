@@ -16,3 +16,6 @@ frontend/*.tsbuildinfo
 # Env
 .env
 .env.local
+
+# Launcher logs
+logs/
