@@ -103,13 +103,13 @@ def plan_turn(state: dict[str, Any], student_message: str) -> dict[str, Any]:
 
     parts = [f"This is the opponent's turn {turn_number}."]
     if phase == "aggressive":
-        parts.append("Open from a HIGH, aggressive position. Do not give ground yet; make the student work.")
+        parts.append("Open AGGRESSIVELY and uncompromisingly. Make a hard, high demand, challenge and undercut the opponent's position, and give ZERO ground. Apply pressure. Do NOT be polite, warm, or accommodating, and do not sound willing to settle.")
     elif phase == "firm":
-        parts.append("Hold a firm position. You may probe, doubt, bluff, or use a fake concession, but do not make a real concession this turn.")
+        parts.append("Hold a HARD-NOSED position. Push back forcefully, express doubt and skepticism, probe, bluff, or float a fake concession — but make NO real concession this turn. Stay combative, not friendly.")
     elif phase == "concede":
-        parts.append("The student just made a strong, logical legal argument. You MUST concede SLIGHTLY this turn — give a small, real movement toward them while protecting your headline goal.")
+        parts.append("The student just made a strong, logical legal argument. You MUST concede SLIGHTLY this turn — but do it GRUDGINGLY, frame it as a one-off, and extract something in return. Protect your headline goal.")
     elif phase == "compromise":
-        parts.append("It is turn 6 or later. Begin actively driving toward a realistic middle-ground compromise that both sides could accept.")
+        parts.append("Begin driving toward a realistic middle-ground compromise that both sides could accept — but bargain hard for it; do not give it away or roll over.")
 
     if repeated:
         parts.append("You have already made the same core demand twice — you MUST change or move it now; do not repeat it again.")
