@@ -2,7 +2,7 @@
 
 A gamified legal-negotiation trainer. Pick a side of a real or parody legal dispute, negotiate against a multi-agent AI opponent, and receive a structured coaching report graded against the playbook's negotiation principles.
 
-Built as part of LLMxLaw Hackathon 2026
+Built as part of LLMxLaw Hackathon 2026, check out a DEMO here: https://www.youtube.com/watch?v=qku5kiIx7yg
 
 ![LLMiddle negotiation scene — case file on the left, AI opponent in the courtroom](meet-in-the-llmiddle/docs/screenshot.png)
 
